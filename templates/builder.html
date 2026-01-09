@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Blog Builder Pro</title>
+    <style>
+        :root { --primary: #6366f1; --bg: #f8fafc; --text: #334155; }
+        body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; height: 100vh; display: flex; overflow: hidden; }
+        
+        /* SIDEBAR */
+        .sidebar {
+            width: 400px;
+            background: #fff;
+            border-right: 1px solid #e2e8f0;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.05);
+            z-index: 10;
+        }
+
+        /* TABS */
+        .tabs { display: flex; border-bottom: 1px solid #e2e8f0; }
+        .tab { flex: 1; padding: 15px; text-align: center; cursor: pointer; background: #f1f5f9; font-weight: 600; color: #64748b; border: none; }
+        .tab.active { background: #fff; color: var(--primary); border-bottom: 2px solid var(--primary); }
+
+        /* CONTENT AREAS */
+        .content-area { flex: 1; padding: 20px; display: none; flex-direction: column; gap: 15px; overflow-y: auto; }
+        .content-area.active { display: flex; }
+
+        /* AI CHAT STYLES */
+        textarea.prompt-box {
+            width: 100%; height: 120px; padding: 12px;
+            border: 1px solid #cbd5e1; border-radius: 8px;
+            font-size: 14px; resize: none; font-family: inherit;
+        }
+        button.btn-primary {
+            width: 100%; background: var(--primary); color: white;
+            border: none; padding: 12px; border-radius: 8px;
+            font-weight: 600; cursor: pointer;
+        }
+        button.btn-primary:hover { background: #4f46e5; }
+        button.btn-primary:disabled { background: #94a3b8; }
+
+        /* CODE EDITOR STYLES */
+        textarea.code-editor {
+            width: 100%; flex: 1; padding: 10px;
+            background: #1e293b; color: #a5b4fc;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 12px; border-radius: 8px; border: none; resize: none;
+        }
+
+        /* PREVIEW AREA */
+        .preview-wrapper { flex: 1; background: #e2e8f0; display: flex; flex-direction: column; }
+        .browser-bar {
+            background: #fff; padding: 10px 20px; border-bottom: 1px solid #cbd5e1;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .visual-toggle {
+            display: flex; align-items: center; gap: 10px; font-size: 0.9rem; font-weight: 600; color: #334155;
+        }
+        
+        /* TOGGLE SWITCH */
+        .switch { position: relative; display: inline-block; width: 40px; height: 22px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
+        .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: var(--primary); }
+        input:checked + .slider:before { transform: translateX(18px); }
+
+        iframe { width: 100%; height: 100%; border: none; background: white; }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('ai')">🤖 AI Builder</button>
+            <button class="tab" onclick="switchTab('code')">💻 Code / Import</button>
+        </div>
+
+        <div id="ai-panel" class="content-area active">
+            <h3>Describe your blog</h3>
+            <p style="font-size:0.85rem; color:#666;">Type "Add a recipe for pancakes" or "Make the background blue".</p>
+            <textarea id="prompt" class="prompt-box" placeholder="What should I do next?"></textarea>
+            
+            <button id="generateBtn" class="btn-primary" onclick="handleGenerate()">Run AI Command</button>
+            <div id="status" style="text-align:center; font-size:0.8rem; color:#666;">Ready.</div>
+            
+            <hr style="border: 0; border-top: 1px solid #eee; margin: 10px 0;">
+            
+            <button class="btn-primary" style="background:#475569;" onclick="window.location.href='/download'">Download Final File ⬇️</button>
+        </div>
+
+        <div id="code-panel" class="content-area">
+            <h3>Manual Edit / Import</h3>
+            <p style="font-size:0.85rem; color:#666;">Paste your own HTML here or tweak the AI's code.</p>
+            <textarea id="codeEditor" class="code-editor" spellcheck="false"></textarea>
+            <button class="btn-primary" onclick="saveManualCode()">Save Code Changes</button>
+        </div>
+    </div>
+
+    <div class="preview-wrapper">
+        <div class="browser-bar">
+            <div>
+                <span style="font-weight:bold; color:#333;">Live Preview</span>
+            </div>
+            <div class="visual-toggle">
+                <span>✏️ Visual Edit Mode</span>
+                <label class="switch">
+                    <input type="checkbox" id="visualToggle" onchange="toggleVisualEdit()">
+                    <span class="slider"></span>
+                </label>
+                <button id="saveVisualBtn" onclick="saveVisualChanges()" style="display:none; padding: 5px 10px; background: #22c55e; color:white; border:none; border-radius:4px; cursor:pointer;">Save Text</button>
+            </div>
+        </div>
+        <iframe id="previewFrame" src="/preview"></iframe>
+    </div>
+
+    <script>
+        const iframe = document.getElementById('previewFrame');
+
+        // --- TAB SWITCHING ---
+        function switchTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.content-area').forEach(c => c.classList.remove('active'));
+            
+            if(tab === 'ai') {
+                document.querySelector('.tab:nth-child(1)').classList.add('active');
+                document.getElementById('ai-panel').classList.add('active');
+            } else {
+                document.querySelector('.tab:nth-child(2)').classList.add('active');
+                document.getElementById('code-panel').classList.add('active');
+                loadCodeIntoEditor(); // Refresh code when opening tab
+            }
+        }
+
+        // --- 1. AI GENERATION ---
+        async function handleGenerate() {
+            const prompt = document.getElementById('prompt').value;
+            const btn = document.getElementById('generateBtn');
+            const status = document.getElementById('status');
+
+            if (!prompt) return;
+            btn.disabled = true;
+            btn.innerText = "Gemini is working...";
+            status.innerText = "Generating...";
+
+            try {
+                const res = await fetch('/generate', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ prompt: prompt })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    refreshPreview();
+                    status.innerText = "Done!";
+                } else {
+                    status.innerText = "Error: " + data.error;
+                }
+            } catch (e) { console.error(e); }
+            btn.disabled = false;
+            btn.innerText = "Run AI Command";
+        }
+
+        // --- 2. MANUAL CODE IMPORT/EDIT ---
+        async function loadCodeIntoEditor() {
+            const res = await fetch('/get_code');
+            const data = await res.json();
+            document.getElementById('codeEditor').value = data.code;
+        }
+
+        async function saveManualCode() {
+            const code = document.getElementById('codeEditor').value;
+            await fetch('/save_code', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ code: code })
+            });
+            refreshPreview();
+            alert("Code Saved & Preview Updated!");
+        }
+
+        // --- 3. VISUAL EDITING ---
+        function toggleVisualEdit() {
+            const isOn = document.getElementById('visualToggle').checked;
+            const saveBtn = document.getElementById('saveVisualBtn');
+            const doc = iframe.contentDocument || iframe.contentWindow.document;
+
+            if (isOn) {
+                doc.body.contentEditable = "true";
+                doc.designMode = "on";
+                saveBtn.style.display = "inline-block";
+                alert("Visual Mode ON: Click anywhere in the preview to type/edit text directly!");
+            } else {
+                doc.body.contentEditable = "false";
+                doc.designMode = "off";
+                saveBtn.style.display = "none";
+            }
+        }
+
+        async function saveVisualChanges() {
+            const doc = iframe.contentDocument || iframe.contentWindow.document;
+            
+            // Turn off edit mode momentarily to get clean HTML
+            doc.body.contentEditable = "false"; 
+            const fullHTML = "<!DOCTYPE html>\n<html>" + doc.documentElement.innerHTML + "</html>";
+            
+            await fetch('/save_code', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ code: fullHTML })
+            });
+
+            // Re-enable if toggle is still on
+            if(document.getElementById('visualToggle').checked) {
+                doc.body.contentEditable = "true";
+            }
+            alert("Visual Changes Saved to File!");
+        }
+
+        function refreshPreview() {
+            iframe.src = '/preview?t=' + new Date().getTime();
+        }
+    </script>
+</body>
+</html>
