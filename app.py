@@ -5,35 +5,36 @@ from werkzeug.utils import secure_filename
 from google import genai
 from dotenv import load_dotenv
 
-# Load environment variables
 load_dotenv()
 
 app = Flask(__name__)
 
-# Securely get the API Key
-GENAI_API_KEY = os.getenv("GEMINI_API_KEY")
-if not GENAI_API_KEY:
-    print("❌ WARNING: GEMINI_API_KEY not found in .env")
-
-# Initialize Client (for text generation only now)
-client = genai.Client(api_key=GENAI_API_KEY)
-
-# --- CONFIGURATION ---
+# CONFIG
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECTS_DIR = os.path.join(BASE_DIR, "projects")
 UPLOAD_FOLDER = os.path.join(BASE_DIR, "static", "uploads")
-TEMPLATES_DIR = os.path.join(BASE_DIR, "templates")
-BLOG_FILE = os.path.join(TEMPLATES_DIR, "generated_blog.html")
-
-# Allowed file types for security
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'svg', 'mp4', 'mov', 'webm'}
 
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-# Ensure upload directory exists
+# Ensure directories exist
+os.makedirs(PROJECTS_DIR, exist_ok=True)
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+# API KEY
+GENAI_API_KEY = os.getenv("GEMINI_API_KEY")
+client = genai.Client(api_key=GENAI_API_KEY)
+
+# --- HELPER FUNCTIONS ---
+def get_project_path(filename):
+    # Security: Ensure filename is safe and ends in .html
+    safe_name = secure_filename(filename)
+    if not safe_name.endswith('.html'):
+        safe_name += '.html'
+    return os.path.join(PROJECTS_DIR, safe_name)
+
 def allowed_file(filename):
-    return '.' in filename and \
-           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 # --- ROUTES ---
 
@@ -41,91 +42,110 @@ def allowed_file(filename):
 def index():
     return render_template('builder.html')
 
-@app.route('/preview')
-def preview():
-    if not os.path.exists(BLOG_FILE):
-        return "<div style='text-align:center; padding:50px; font-family:sans-serif;'><h1>No blog yet.</h1></div>"
-    # Add a timestamp to force browser to load latest version
-    return render_template('generated_blog.html', t=uuid.uuid4().hex)
+# 1. LIST PROJECTS
+@app.route('/projects', methods=['GET'])
+def list_projects():
+    files = [f for f in os.listdir(PROJECTS_DIR) if f.endswith('.html')]
+    return jsonify({"projects": files})
 
-# --- NEW: ASSET UPLOAD ROUTE ---
-@app.route('/upload_asset', methods=['POST'])
-def upload_asset():
-    if 'file' not in request.files:
-        return jsonify({"success": False, "error": "No file part"})
+# 2. CREATE NEW PROJECT
+@app.route('/create_project', methods=['POST'])
+def create_project():
+    name = request.json.get('name')
+    if not name: return jsonify({"success": False, "error": "No name provided"})
     
-    file = request.files['file']
-    if file.filename == '':
-        return jsonify({"success": False, "error": "No selected file"})
+    filepath = get_project_path(name)
+    if os.path.exists(filepath):
+        return jsonify({"success": False, "error": "Project already exists"})
     
-    if file and allowed_file(file.filename):
-        filename = secure_filename(file.filename)
-        # Generate unique name to prevent overwrites (e.g., mycat.jpg -> mycat_a1b2c3.jpg)
-        unique_filename = f"{filename.rsplit('.', 1)[0]}_{uuid.uuid4().hex[:6]}.{filename.rsplit('.', 1)[1].lower()}"
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
-        file.save(filepath)
+    # Create empty starter template
+    with open(filepath, "w") as f:
+        f.write("<!DOCTYPE html><html><body><h1>New Project: " + name + "</h1></body></html>")
         
-        # Determine HTML snippet based on file type
-        web_path = f"/static/uploads/{unique_filename}"
-        if filename.rsplit('.', 1)[1].lower() in ['mp4', 'mov', 'webm']:
-             snippet = f'<video controls width="100%"><source src="{web_path}" type="video/mp4">Your browser does not support the video tag.</video>'
-        else:
-             snippet = f'<img src="{web_path}" alt="Uploaded Image" style="max-width:100%; height:auto;">'
+    return jsonify({"success": True, "filename": os.path.basename(filepath)})
 
-        return jsonify({
-            "success": True, 
-            "path": web_path, 
-            "snippet": snippet,
-            "filename": unique_filename
-        })
+# 3. PREVIEW (Load specific project)
+@app.route('/preview/<filename>')
+def preview(filename):
+    filepath = get_project_path(filename)
+    if not os.path.exists(filepath):
+        return "Project not found", 404
+    return send_file(filepath)
+
+# 4. GET CODE (For Editor)
+@app.route('/get_code/<filename>')
+def get_code(filename):
+    filepath = get_project_path(filename)
+    if os.path.exists(filepath):
+        with open(filepath, "r", encoding="utf-8") as f:
+            return jsonify({"code": f.read()})
+    return jsonify({"code": ""})
+
+# 5. SAVE CODE
+@app.route('/save_code', methods=['POST'])
+def save_code():
+    data = request.json
+    filename = data.get('filename')
+    code = data.get('code')
+    filepath = get_project_path(filename)
     
-    return jsonify({"success": False, "error": "File type not allowed"})
+    with open(filepath, "w", encoding="utf-8") as f:
+        f.write(code)
+    return jsonify({"success": True})
 
-# --- EXISTING AI & SAVE ROUTES ---
+# 6. GENERATE AI (Aware of current project)
 @app.route('/generate', methods=['POST'])
 def generate():
     data = request.json
+    filename = data.get('filename')
     user_prompt = data.get('prompt')
+    
+    filepath = get_project_path(filename)
     current_code = ""
-    if os.path.exists(BLOG_FILE):
-        with open(BLOG_FILE, "r", encoding="utf-8") as f: current_code = f.read()
+    if os.path.exists(filepath):
+        with open(filepath, "r", encoding="utf-8") as f: current_code = f.read()
 
     system_instruction = f"""
     You are an expert AI Web Developer. 
     User Request: "{user_prompt}"
-    Current Code Context: {current_code if current_code else "None"}
+    Current Code: {current_code}
 
     INSTRUCTIONS:
     1. Output the COMPLETE HTML file.
-    2. If the user asks to insert an image or video snippet they provide, place it exactly where requested.
-    3. Return ONLY raw HTML code. No markdown.
+    2. Do NOT use markdown blocks. Return ONLY raw HTML.
     """
     try:
         response = client.models.generate_content(model='gemini-2.5-flash', contents=system_instruction)
         clean_code = response.text.replace("```html", "").replace("```", "").strip()
-        with open(BLOG_FILE, "w", encoding="utf-8") as f: f.write(clean_code)
+        with open(filepath, "w", encoding="utf-8") as f: f.write(clean_code)
         return jsonify({"success": True})
     except Exception as e: return jsonify({"success": False, "error": str(e)})
 
-@app.route('/save_code', methods=['POST'])
-def save_code():
-    new_code = request.json.get('code')
-    with open(BLOG_FILE, "w", encoding="utf-8") as f: f.write(new_code)
-    return jsonify({"success": True})
+# 7. UPLOAD (Same as before)
+@app.route('/upload_asset', methods=['POST'])
+def upload_asset():
+    if 'file' not in request.files: return jsonify({"success": False})
+    file = request.files['file']
+    if file and allowed_file(file.filename):
+        filename = secure_filename(file.filename)
+        unique_filename = f"{uuid.uuid4().hex[:6]}_{filename}"
+        file.save(os.path.join(app.config['UPLOAD_FOLDER'], unique_filename))
+        web_path = f"/static/uploads/{unique_filename}"
+        
+        snippet = f'<img src="{web_path}" style="max-width:100%">'
+        if filename.endswith(('mp4','mov','webm')):
+             snippet = f'<video controls width="100%"><source src="{web_path}"></video>'
+             
+        return jsonify({"success": True, "snippet": snippet})
+    return jsonify({"success": False})
 
-@app.route('/get_code', methods=['GET'])
-def get_code():
-    if os.path.exists(BLOG_FILE):
-        with open(BLOG_FILE, "r", encoding="utf-8") as f: return jsonify({"code": f.read()})
-    return jsonify({"code": ""})
-
-@app.route('/download')
-def download_file():
-    if os.path.exists(BLOG_FILE):
-        return send_file(BLOG_FILE, as_attachment=True, download_name='my_ai_blog.html')
-    return "No file", 404
+@app.route('/download/<filename>')
+def download_file(filename):
+    filepath = get_project_path(filename)
+    if os.path.exists(filepath):
+        return send_file(filepath, as_attachment=True)
+    return "Not found", 404
 
 if __name__ == '__main__':
-    # Using port 5002 to avoid AirPlay conflict on Macs
-    print("--- AI Builder with Uploads running on http://127.0.0.1:5002 ---")
+    print("--- Multi-Session AI Builder running on http://127.0.0.1:5002 ---")
     app.run(debug=True, port=5002)

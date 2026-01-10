@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QuantumBlog - Futuristic Tech Insights</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&amp;family=Roboto:wght@300;400;700&amp;display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-bg: #0a0a0f;
+            --secondary-bg: #1a1a2e;
+            --accent-color: #00e676; /* Neon Green */
+            --text-color: #e0e0e0;
+            --light-text-color: #a0a0a0;
+            --border-color: #004d40;
+            --hover-color: #00ff8c;
+            --link-color: #00c853;
+            --header-height: 80px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: var(--primary-bg);
+            color: var(--text-color);
+            line-height: 1.6;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        header {
+            background-color: var(--secondary-bg);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            height: var(--header-height);
+            box-shadow: 0 4px 15px rgba(0, 230, 118, 0.1);
+        }
+
+        .logo {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: var(--accent-color);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px var(--accent-color), 0 0 20px rgba(0, 230, 118, 0.5);
+            transition: all 0.3s ease;
+        }
+
+        .logo:hover {
+            color: var(--hover-color);
+            text-shadow: 0 0 15px var(--hover-color), 0 0 25px rgba(0, 255, 140, 0.7);
+        }
+
+        nav ul {
+            list-style: none;
+            display: flex;
+        }
+
+        nav ul li {
+            margin-left: 2.5rem;
+        }
+
+        nav ul li a {
+            color: var(--text-color);
+            text-decoration: none;
+            font-size: 1.1rem;
+            font-weight: 400;
+            padding: 0.5rem 0;
+            position: relative;
+            transition: color 0.3s ease;
+        }
+
+        nav ul li a::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background-color: var(--accent-color);
+            transition: width 0.3s ease;
+        }
+
+        nav ul li a:hover {
+            color: var(--accent-color);
+        }
+
+        nav ul li a:hover::after,
+        nav ul li a.active::after {
+            width: 100%;
+        }
+
+        main {
+            flex: 1;
+            padding: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+            animation: fadeIn 1s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .hero {
+            text-align: center;
+            padding: 4rem 2rem;
+            margin-bottom: 3rem;
+            background: linear-gradient(45deg, var(--secondary-bg) 0%, rgba(10, 10, 15, 0.8) 100%);
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 0 30px rgba(0, 230, 118, 0.15);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle at center, rgba(0, 230, 118, 0.1) 0%, transparent 70%);
+            animation: pulseEffect 8s infinite alternate;
+        }
+
+        @keyframes pulseEffect {
+            0% { transform: scale(1); opacity: 0.2; }
+            100% { transform: scale(1.1); opacity: 0.3; }
+        }
+
+        .hero h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 3.5rem;
+            color: var(--accent-color);
+            margin-bottom: 1.5rem;
+            text-shadow: 0 0 15px var(--accent-color), 0 0 30px rgba(0, 230, 118, 0.7);
+            position: relative;
+            z-index: 1;
+        }
+
+        .hero p {
+            font-size: 1.4rem;
+            color: var(--light-text-color);
+            margin-bottom: 2.5rem;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+            position: relative;
+            z-index: 1;
+        }
+
+        .btn-primary {
+            display: inline-block;
+            background-color: var(--accent-color);
+            color: var(--primary-bg);
+            padding: 1rem 2.5rem;
+            border-radius: 50px;
+            text-decoration: none;
+            font-size: 1.2rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 15px var(--accent-color);
+            position: relative;
+            overflow: hidden;
+            z-index: 1;
+        }
+
+        .btn-primary::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+            transition: 0.5s;
+        }
+
+        .btn-primary:hover::before {
+            left: 100%;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--hover-color);
+            box-shadow: 0 0 25px var(--hover-color);
+            transform: translateY(-3px);
+        }
+
+        .category-nav {
+            background-color: var(--secondary-bg);
+            padding: 1rem 0;
+            border-radius: 8px;
+            margin-bottom: 3rem;
+            text-align: center;
+            box-shadow: 0 0 20px rgba(0, 230, 118, 0.08);
+            border: 1px solid var(--border-color);
+        }
+
+        .category-nav h2 {
+            font-family: 'Orbitron', sans-serif;
+            color: var(--accent-color);
+            font-size: 1.8rem;
+            margin-bottom: 1rem;
+        }
+
+        .category-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 1.2rem;
+            padding: 0 2rem;
+        }
+
+        .category-btn {
+            background-color: var(--primary-bg);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            padding: 0.8rem 1.8rem;
+            border-radius: 30px;
+            text-decoration: none;
+            font-size: 1rem;
+            font-weight: 400;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            box-shadow: 0 0 8px rgba(0, 230, 118, 0.05);
+        }
+
+        .category-btn:hover {
+            background-color: var(--accent-color);
+            color: var(--primary-bg);
+            border-color: var(--hover-color);
+            transform: translateY(-2px);
+            box-shadow: 0 0 15px rgba(0, 230, 118, 0.3);
+        }
+
+        .category-btn.active {
+            background-color: var(--accent-color);
+            color: var(--primary-bg);
+            border-color: var(--hover-color);
+            box-shadow: 0 0 15px rgba(0, 230, 118, 0.4);
+            font-weight: 700;
+        }
+
+        .blog-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2.5rem;
+        }
+
+        .blog-post {
+            background-color: var(--secondary-bg);
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 0 20px rgba(0, 230, 118, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            opacity: 0; /* Hidden by default */
+            transform: translateY(20px); /* Slightly off-screen */
+            animation: slideIn 0.6s forwards ease-out;
+        }
+
+        .blog-post.hidden {
+            display: none;
+        }
+
+        @keyframes slideIn {
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .blog-post:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 30px rgba(0, 230, 118, 0.25);
+        }
+
+        .blog-post img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .post-content {
+            padding: 1.5rem;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .post-content h3 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.6rem;
+            color: var(--accent-color);
+            margin-bottom: 0.8rem;
+            line-height: 1.3;
+        }
+
+        .post-meta {
+            font-size: 0.9rem;
+            color: var(--light-text-color);
+            margin-bottom: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .post-meta .category-tag {
+            background-color: var(--border-color);
+            color: var(--accent-color);
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 700;
+        }
+
+        .post-content p {
+            font-size: 1rem;
+            color: var(--text-color);
+            margin-bottom: 1.5rem;
+            flex-grow: 1;
+        }
+
+        .read-more {
+            display: inline-block;
+            color: var(--link-color);
+            text-decoration: none;
+            font-weight: 700;
+            transition: color 0.3s ease;
+        }
+
+        .read-more:hover {
+            color: var(--hover-color);
+            text-decoration: underline;
+        }
+
+        /* Generic Page Styles (About, Contact) */
+        .page-content {
+            background-color: var(--secondary-bg);
+            padding: 3rem;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 0 25px rgba(0, 230, 118, 0.1);
+            margin-top: 2rem;
+        }
+
+        .page-content h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 3rem;
+            color: var(--accent-color);
+            margin-bottom: 1.5rem;
+            text-align: center;
+            text-shadow: 0 0 10px var(--accent-color);
+        }
+
+        .page-content h2 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2rem;
+            color: var(--link-color);
+            margin-top: 2.5rem;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.5rem;
+        }
+
+        .page-content p, .page-content ul li {
+            font-size: 1.1rem;
+            color: var(--text-color);
+            margin-bottom: 1rem;
+            line-height: 1.8;
+        }
+
+        .page-content ul {
+            list-style: none;
+            padding-left: 1.5rem;
+        }
+
+        .page-content ul li::before {
+            content: '›';
+            color: var(--accent-color);
+            font-weight: bold;
+            display: inline-block;
+            width: 1em;
+            margin-left: -1em;
+        }
+
+        .contact-form {
+            display: grid;
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 1.1rem;
+            color: var(--link-color);
+            margin-bottom: 0.5rem;
+            font-weight: 700;
+        }
+
+        .form-group input[type="text"],
+        .form-group input[type="email"],
+        .form-group textarea {
+            width: 100%;
+            padding: 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background-color: var(--primary-bg);
+            color: var(--text-color);
+            font-size: 1rem;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .form-group input[type="text"]:focus,
+        .form-group input[type="email"]:focus,
+        .form-group textarea:focus {
+            border-color: var(--accent-color);
+            outline: none;
+            box-shadow: 0 0 10px rgba(0, 230, 118, 0.4);
+        }
+
+        .form-group textarea {
+            min-height: 150px;
+            resize: vertical;
+        }
+
+        .submit-btn {
+            background-color: var(--accent-color);
+            color: var(--primary-bg);
+            border: none;
+            padding: 1rem 2.5rem;
+            border-radius: 50px;
+            font-size: 1.2rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 15px var(--accent-color);
+            width: auto;
+            display: block;
+            margin-top: 1.5rem;
+        }
+
+        .submit-btn:hover {
+            background-color: var(--hover-color);
+            box-shadow: 0 0 25px var(--hover-color);
+            transform: translateY(-3px);
+        }
+
+        footer {
+            background-color: var(--secondary-bg);
+            color: var(--light-text-color);
+            text-align: center;
+            padding: 2rem;
+            margin-top: 3rem;
+            border-top: 2px solid var(--border-color);
+            box-shadow: 0 -4px 15px rgba(0, 230, 118, 0.1);
+        }
+
+        footer p {
+            margin: 0;
+            font-size: 0.9rem;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 992px) {
+            header {
+                flex-direction: column;
+                height: auto;
+                padding: 1rem;
+            }
+
+            .logo {
+                margin-bottom: 1rem;
+            }
+
+            nav ul {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+
+            nav ul li {
+                margin: 0.5rem 1rem;
+            }
+
+            .hero h1 {
+                font-size: 2.8rem;
+            }
+
+            .hero p {
+                font-size: 1.2rem;
+            }
+
+            .category-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .blog-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .page-content {
+                padding: 2rem;
+            }
+
+            .page-content h1 {
+                font-size: 2.5rem;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .logo {
+                font-size: 1.8rem;
+            }
+
+            nav ul {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            nav ul li {
+                margin: 0.3rem 0;
+            }
+
+            main {
+                padding: 1rem;
+            }
+
+            .hero {
+                padding: 3rem 1rem;
+            }
+
+            .hero h1 {
+                font-size: 2rem;
+            }
+
+            .hero p {
+                font-size: 1rem;
+            }
+
+            .btn-primary {
+                padding: 0.8rem 2rem;
+                font-size: 1rem;
+            }
+
+            .category-nav h2 {
+                font-size: 1.5rem;
+            }
+
+            .category-btn {
+                padding: 0.6rem 1.2rem;
+                font-size: 0.9rem;
+            }
+
+            .blog-post .post-content h3 {
+                font-size: 1.3rem;
+            }
+
+            .page-content h1 {
+                font-size: 2rem;
+            }
+
+            .page-content h2 {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body contenteditable="false">
+    <header>
+        <a href="#home" class="logo">QuantumBlog</a>
+        <nav>
+            <ul>
+                <li><a href="#home" class="nav-link active" data-page="home">Home</a></li>
+                <li><a href="#about" class="nav-link" data-page="about">About</a></li>
+                <li><a href="#contact" class="nav-link" data-page="contact">Contact Us</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main id="main-content">
+        <!-- Home Page Content -->
+        <section id="home-page" class="page-section" style="display: block; animation: 1s ease-out forwards fadeIn;">
+            <div class="hero">
+                <h1>Explore the Future of Tech. Today.</h1>
+                <p>Dive into cutting-edge articles, in-depth analyses, and the latest innovations shaping our digital world. Your source for AI, Web3, Quantum Computing, and beyond.</p>
+                <a href="#blog-posts" class="btn-primary">Read Our Latest Posts</a>
+            </div>
+
+            <div class="category-nav">
+                <h2>Browse by Category</h2>
+                <div class="category-buttons">
+                    <button class="category-btn active" data-category="all">All Topics</button><button class="category-btn" data-category="ai">Artificial Intelligence</button><button class="category-btn" data-category="robotics">Robotics</button>
+                    <button class="category-btn" data-category="cybersecurity">Cybersecurity</button>
+                    <button class="category-btn" data-category="space">Space Tech</button>
+                </div>
+            </div>
+
+            <section id="blog-posts">
+                <div class="blog-grid">
+                    <!-- Blog Post 1 -->
+                    <article class="blog-post" data-category="ai" style="display: flex; animation: 0.6s ease-out forwards slideIn;">
+                        <img src="https://via.placeholder.com/400x200/0d1f2e/00e676?text=AI+Revolution" alt="AI Revolution">
+                        <div class="post-content">
+                            <h3>The AI Revolution: Beyond GPT-4</h3>
+                            <div class="post-meta">
+                                <span>May 15, 2024</span>
+                                <span class="category-tag">Artificial Intelligence</span>
+                            </div>
+                            <p>Explore the next generation of AI models and their potential impact on industries and daily life. What comes after large language models?</p>
+                            <a href="#" class="read-more">Read More »</a>
+                        </div>
+                    </article>
+
+                    <!-- Blog Post 2 -->
+                    <article class="blog-post" data-category="web3" style="display: flex; animation: 0.6s ease-out 0.1s forwards slideIn;">
+                        <img src="https://via.placeholder.com/400x200/0d1f2e/00e676?text=Decentralized+Future" alt="Decentralized Future">
+                        <div class="post-content">
+                            <h3>Web3 Demystified: Building the Decentralized Future</h3>
+                            <div class="post-meta">
+                                <span>May 12, 2024</span>
+                                <span class="category-tag">Web3 &amp; Blockchain</span>
+                            </div>
+                            <p>Understand the core principles of Web3, its advantages over traditional web, and the challenges it faces on the path to mass adoption.</p>
+                            <a href="#" class="read-more">Read More »</a>
+                        </div>
+                    </article>
+
+                    <!-- Blog Post 3 -->
+                    <article class="blog-post" data-category="quantum" style="display: flex; animation: 0.6s ease-out 0.2s forwards slideIn;">
+                        <img src="https://via.placeholder.com/400x200/0d1f2e/00e676?text=Quantum+Leap" alt="Quantum Leap">
+                        <div class="post-content">
+                            <h3>Quantum Computing: The Next Big Leap in Processing Power</h3>
+                            <div class="post-meta">
+                                <span>May 10, 2024</span>
+                                <span class="category-tag">Quantum Computing</span>
+                            </div>
+                            <p>An introduction to quantum mechanics, qubits, and the mind-bending potential of quantum computers for cryptography and drug discovery.</p>
+                            <a href="#" class="read-more">Read More »</a>
+                        </div>
+                    </article>
+
+                    <!-- Blog Post 4 -->
+                    <article class="blog-post" data-category="robotics" style="display: flex; animation: 0.6s ease-out 0.3s forwards slideIn;">
+                        <img src="https://via.placeholder.com/400x200/0d1f2e/00e676?text=Humanoid+Robots" alt="Humanoid Robots">
+                        <div class="post-content">
+                            <h3>Humanoid Robotics: Are We Ready for Coexistence?</h3>
+                            <div class="post-meta">
+                                <span>May 08, 2024</span>
+                                <span class="category-tag">Robotics</span>
+                            </div>
+                            <p>From industrial automation to personal assistants, humanoid robots are advancing rapidly. What are the ethical implications?</p>
+                            <a href="#" class="read-more">Read More »</a>
+                        </div>
+                    </article>
+
+                    <!-- Blog Post 5 -->
+                    <article class="blog-post" data-category="cybersecurity" style="display: flex; animation: 0.6s ease-out 0.4s forwards slideIn;">
+                        <img src="https://via.placeholder.com/400x200/0d1f2e/00e676?text=Future+of+Cybersecurity" alt="Future of Cybersecurity">
+                        <div class="post-content">
+                            <h3>The Evolving Threat Landscape: Future of Cybersecurity</h3>
+                            <div class="post-meta">
+                                <span>May 05, 2024</span>
+                                <span class="category-tag">Cybersecurity</span>
+                            </div>
+                            <p>With AI-powered attacks and quantum threats on the horizon, how are cybersecurity experts preparing for the battles of tomorrow?</p>
+                            <a href="#" class="read-more">Read More »</a>
+                        </div>
+                    </article>
+
+                    <!-- Blog Post 6 -->
+                    <article class="blog-post" data-category="space" style="display: flex; animation: 0.6s ease-out 0.5s forwards slideIn;">
+                        <img src="https://via.placeholder.com/400x200/0d1f2e/00e676?text=Private+Spaceflight" alt="Private Spaceflight">
+                        <div class="post-content">
+                            <h3>Private Spaceflight: Redefining Our Cosmic Ambitions</h3>
+                            <div class="post-meta">
+                                <span>May 02, 2024</span>
+                                <span class="category-tag">Space Tech</span>
+                            </div>
+                            <p>How companies like SpaceX and Blue Origin are democratizing access to space and pushing the boundaries of exploration.</p>
+                            <a href="#" class="read-more">Read More »</a>
+                        </div>
+                    </article>
+
+                    <!-- Blog Post 7 -->
+                    <article class="blog-post" data-category="ai" style="display: flex; animation: 0.6s ease-out 0.6s forwards slideIn;">
+                        <img src="https://via.placeholder.com/400x200/0d1f2e/00e676?text=AI+Ethics" alt="AI Ethics">
+                        <div class="post-content">
+                            <h3>Ethics in AI: Navigating the Moral Maze of Intelligent Machines</h3>
+                            <div class="post-meta">
+                                <span>April 29, 2024</span>
+                                <span class="category-tag">Artificial Intelligence</span>
+                            </div>
+                            <p>As AI becomes more sophisticated, the ethical considerations around bias, privacy, and control become increasingly critical.</p>
+                            <a href="#" class="read-more">Read More »</a>
+                        </div>
+                    </article>
+
+                    <!-- Blog Post 8 -->
+                    <article class="blog-post" data-category="web3" style="display: flex; animation: 0.6s ease-out 0.7s forwards slideIn;">
+                        <img src="https://via.placeholder.com/400x200/0d1f2e/00e676?text=NFTs+and+Metaverse" alt="NFTs and Metaverse">
+                        <div class="post-content">
+                            <h3>NFTs and the Metaverse: Digital Ownership in Virtual Worlds</h3>
+                            <div class="post-meta">
+                                <span>April 25, 2024</span>
+                                <span class="category-tag">Web3 &amp; Blockchain</span>
+                            </div>
+                            <p>Beyond the hype, explore the foundational technologies of NFTs and their role in establishing true digital ownership within the metaverse.</p>
+                            <a href="#" class="read-more">Read More »</a>
+                        </div>
+                    </article>
+                </div>
+            </section>
+        </section>
+
+        <!-- About Page Content -->
+        <section id="about-page" class="page-section hidden" style="display: none; animation: none;">
+            <div class="page-content">
+                <h1>About QuantumBlog</h1>
+                <p>Welcome to <strong>QuantumBlog</strong> – your premier destination for exploring the bleeding edge of technology. In a world constantly reshaped by innovation, we strive to be your beacon, illuminating the complex concepts and breakthrough discoveries that are defining our future.</p>
+
+                <h2>Our Mission</h2>
+                <p>Our mission is to bridge the gap between complex technological advancements and curious minds. We aim to provide clear, insightful, and engaging content that not only informs but also inspires our readers to understand and participate in the ongoing tech revolution. From the intricacies of quantum physics to the societal impacts of AI, we cover it all with a futuristic perspective.</p>
+
+                <h2>What We Cover</h2>
+                <ul>
+                    <li><strong>Artificial Intelligence:</strong> Deep dives into machine learning, neural networks, ethical AI, and the future of intelligent systems.</li>
+                    <li><strong>Web3 &amp; Blockchain:</strong> Explanations of cryptocurrencies, NFTs, decentralized finance (DeFi), and the evolving landscape of the internet.</li>
+                    <li><strong>Quantum Computing:</strong> The foundational science, current progress, and potential implications of quantum supremacy.</li>
+                    <li><strong>Robotics &amp; Automation:</strong> Advances in humanoid robots, industrial automation, and the future of human-robot interaction.</li>
+                    <li><strong>Cybersecurity:</strong> Keeping abreast of the latest threats, defense strategies, and privacy concerns in a hyper-connected world.</li>
+                    <li><strong>Space Technology:</strong> The new era of space exploration, private spaceflight, and the technologies propelling us beyond Earth.</li>
+                </ul>
+
+                <h2>Our Vision</h2>
+                <p>We envision a future where everyone, regardless of their background, can comprehend and contribute to the technological discourse. QuantumBlog is built on the belief that informed citizens are empowered citizens, ready to navigate and shape the world of tomorrow. Join us on this exciting journey into the quantum realm of technology!</p>
+            </div>
+        </section>
+
+        <!-- Contact Us Page Content -->
+        <section id="contact-page" class="page-section hidden" style="display: none; animation: none;">
+            <div class="page-content">
+                <h1>Contact QuantumBlog</h1>
+                <p>We love hearing from our readers! Whether you have a question, a suggestion for a topic, or just want to share your thoughts on the future of tech, please don't hesitate to reach out. Your feedback helps us improve and grow.</p>
+
+                <h2>Get in Touch</h2>
+                <p>You can reach us through the form below, or connect with us on our social channels (coming soon!).</p>
+
+                <form class="contact-form">
+                    <div class="form-group">
+                        <label for="name">Your Name</label>
+                        <input type="text" id="name" name="name" required="" placeholder="John Doe">
+                    </div>
+                    <div class="form-group">
+                        <label for="email">Your Email</label>
+                        <input type="email" id="email" name="email" required="" placeholder="john.doe@example.com">
+                    </div>
+                    <div class="form-group">
+                        <label for="subject">Subject</label>
+                        <input type="text" id="subject" name="subject" required="" placeholder="Question about an article / Suggestion">
+                    </div>
+                    <div class="form-group">
+                        <label for="message">Your Message</label>
+                        <textarea id="message" name="message" rows="7" required="" placeholder="Type your message here..."></textarea>
+                    </div>
+                    <button type="submit" class="submit-btn">Send Message</button>
+                </form>
+
+                <h2>Other Ways to Connect</h2>
+                <p>Email: <a href="mailto:info@quantumblog.com" style="color: var(--link-color); text-decoration: none;">info@quantumblog.com</a></p>
+                <p>Address: 123 Future Lane, Tech City, Metaverse 10101</p>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>© 2024 QuantumBlog. All rights reserved. | Built with Futuristic Vision</p>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const navLinks = document.querySelectorAll('.nav-link');
+            const pageSections = document.querySelectorAll('.page-section');
+            const categoryButtons = document.querySelectorAll('.category-btn');
+            const blogPosts = document.querySelectorAll('.blog-post');
+            const mainContent = document.getElementById('main-content');
+
+            // Function to show a specific page and hide others
+            function showPage(pageId) {
+                pageSections.forEach(section => {
+                    section.classList.add('hidden');
+                    section.style.display = 'none'; // Hide physically
+                    section.style.animation = 'none'; // Reset animation
+                });
+                const activePage = document.getElementById(pageId + '-page');
+                if (activePage) {
+                    activePage.classList.remove('hidden');
+                    activePage.style.display = 'block'; // Show physically
+                    activePage.style.animation = 'fadeIn 1s ease-out forwards'; // Apply animation
+                }
+
+                // Update active class for nav links
+                navLinks.forEach(link => {
+                    link.classList.remove('active');
+                    if (link.dataset.page === pageId) {
+                        link.classList.add('active');
+                    }
+                });
+
+                // Scroll to top of main content
+                mainContent.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+
+            // Handle navigation clicks
+            navLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const pageId = this.dataset.page;
+                    showPage(pageId);
+                    // Update URL hash for direct linking/refresh
+                    history.pushState(null, '', `#${pageId}`);
+                });
+            });
+
+            // Handle category filtering
+            categoryButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    categoryButtons.forEach(btn => btn.classList.remove('active'));
+                    this.classList.add('active');
+
+                    const filterCategory = this.dataset.category;
+
+                    blogPosts.forEach((post, index) => {
+                        const postCategory = post.dataset.category;
+                        if (filterCategory === 'all' || postCategory === filterCategory) {
+                            post.classList.remove('hidden');
+                            post.style.display = 'flex'; // Ensure display is correct for flexbox
+                            // Staggered animation
+                            post.style.animation = `slideIn 0.6s ease-out forwards ${index * 0.1}s`;
+                        } else {
+                            post.classList.add('hidden');
+                            post.style.display = 'none'; // Hide physically
+                            post.style.animation = 'none'; // Reset animation
+                        }
+                    });
+                });
+            });
+
+            // Initial page load based on URL hash or default to home
+            const initialHash = window.location.hash.substring(1); // Remove '#'
+            if (initialHash && document.getElementById(initialHash + '-page')) {
+                showPage(initialHash);
+            } else {
+                showPage('home'); // Default to home page
+            }
+
+            // Optionally, handle form submission (example - prevent default)
+            const contactForm = document.querySelector('.contact-form');
+            if (contactForm) {
+                contactForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    alert('Message Sent! (This is a demo, no actual sending occurs.)');
+                    this.reset();
+                });
+            }
+
+            // Ensure categories are filtered on initial load of homepage
+            if (document.getElementById('home-page').style.display !== 'none') {
+                document.querySelector('.category-btn.active').click();
+            }
+        });
+    </script>
+
+</body></html>

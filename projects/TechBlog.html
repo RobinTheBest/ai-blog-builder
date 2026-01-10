@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TechBlog - Future Tech Insights</title>
+    <meta name="description" content="Explore the cutting edge of technology with TechBlog. Futuristic insights, sleek design.">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💡</text></svg>">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Roboto:wght@300;400;700&display=swap');
+
+        :root {
+            --bg-color: #1a1a2e;
+            --primary-color: #0f3460;
+            --secondary-color: #e94560;
+            --accent-color: #533483;
+            --text-light: #e0e0e0;
+            --text-dark: #cccccc;
+            --border-color: #2e3b52;
+            --gradient-start: #3a1c71;
+            --gradient-end: #d76d77;
+            --gradient-mid: #ffaf7b;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            margin: 0;
+            background-color: var(--bg-color);
+            color: var(--text-light);
+            line-height: 1.6;
+            scroll-behavior: smooth;
+        }
+
+        h1, h2, h3, h4, h5, h6 {
+            font-family: 'Orbitron', sans-serif;
+            color: var(--secondary-color);
+            margin-top: 1.5em;
+            margin-bottom: 0.8em;
+        }
+
+        a {
+            color: var(--secondary-color);
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        a:hover {
+            color: var(--accent-color);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* Header */
+        header {
+            background-color: var(--primary-color);
+            padding: 1rem 0;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        header .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--text-light);
+            text-shadow: 0 0 10px rgba(233, 69, 96, 0.7);
+        }
+
+        nav ul {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: flex;
+        }
+
+        nav ul li {
+            margin-left: 30px;
+        }
+
+        nav ul li a {
+            color: var(--text-light);
+            font-weight: 700;
+            font-size: 1.1rem;
+            position: relative;
+            padding: 5px 0;
+            transition: color 0.3s ease;
+        }
+
+        nav ul li a::after {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 3px;
+            bottom: 0;
+            left: 0;
+            background-color: var(--secondary-color);
+            transition: width 0.3s ease;
+        }
+
+        nav ul li a:hover::after,
+        nav ul li a.active::after {
+            width: 100%;
+        }
+
+        nav ul li a:hover,
+        nav ul li a.active {
+            color: var(--secondary-color);
+        }
+
+        /* Hero Section */
+        .hero {
+            background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-mid) 50%, var(--gradient-end) 100%);
+            padding: 100px 0;
+            text-align: center;
+            border-bottom: 5px solid var(--accent-color);
+        }
+
+        .hero h1 {
+            font-size: 3.5rem;
+            margin-bottom: 20px;
+            color: var(--text-light);
+            text-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
+        }
+
+        .hero p {
+            font-size: 1.3rem;
+            max-width: 800px;
+            margin: 0 auto 40px auto;
+            color: var(--text-light);
+        }
+
+        .btn {
+            background-color: var(--secondary-color);
+            color: var(--text-light);
+            padding: 15px 30px;
+            border-radius: 5px;
+            font-weight: 700;
+            font-size: 1.1rem;
+            transition: background-color 0.3s ease, transform 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+        }
+
+        .btn:hover {
+            background-color: var(--accent-color);
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6);
+        }
+
+        /* Main Sections */
+        section {
+            padding: 80px 0;
+            background-color: var(--bg-color);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        section:nth-of-type(even) {
+            background-color: #111827; /* Slightly different background for visual separation */
+        }
+
+        .section-title {
+            text-align: center;
+            font-size: 2.5rem;
+            margin-bottom: 60px;
+            color: var(--secondary-color);
+            position: relative;
+            padding-bottom: 15px;
+        }
+
+        .section-title::after {
+            content: '';
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            bottom: 0;
+            width: 80px;
+            height: 4px;
+            background-color: var(--accent-color);
+            border-radius: 2px;
+        }
+
+        /* Blog Post Cards */
+        .blog-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 40px;
+        }
+
+        .blog-post-card {
+            background-color: var(--primary-color);
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .blog-post-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 12px 25px rgba(0, 0, 0, 0.7);
+        }
+
+        .blog-post-card img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-bottom: 3px solid var(--accent-color);
+        }
+
+        .card-content {
+            padding: 25px;
+        }
+
+        .card-content h3 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            font-size: 1.6rem;
+            color: var(--secondary-color);
+        }
+
+        .card-content p {
+            color: var(--text-dark);
+            font-size: 0.95rem;
+            margin-bottom: 20px;
+        }
+
+        .read-more {
+            display: inline-block;
+            background-color: var(--accent-color);
+            color: var(--text-light);
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            transition: background-color 0.3s ease;
+        }
+
+        .read-more:hover {
+            background-color: var(--secondary-color);
+        }
+
+        /* Categories Section */
+        .category-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 60px;
+        }
+
+        .category-btn {
+            background-color: var(--primary-color);
+            color: var(--text-light);
+            padding: 12px 25px;
+            border-radius: 25px;
+            font-weight: 700;
+            border: 2px solid var(--border-color);
+            transition: background-color 0.3s ease, border-color 0.3s ease, transform 0.3s ease;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .category-btn:hover {
+            background-color: var(--accent-color);
+            border-color: var(--secondary-color);
+            transform: translateY(-3px);
+        }
+
+        /* About Section */
+        .about-content {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 40px;
+        }
+
+        .about-text, .about-image {
+            flex: 1;
+            min-width: 300px;
+        }
+
+        .about-image img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 10px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+            border: 3px solid var(--accent-color);
+        }
+
+        .about-text h3 {
+            font-size: 2rem;
+            margin-top: 0;
+            color: var(--secondary-color);
+        }
+
+        .about-text p {
+            color: var(--text-dark);
+            margin-bottom: 1em;
+        }
+
+        /* Contact Section */
+        .contact-form-container {
+            max-width: 700px;
+            margin: 0 auto;
+            background-color: var(--primary-color);
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .contact-form-container label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: 700;
+            color: var(--secondary-color);
+        }
+
+        .contact-form-container input[type="text"],
+        .contact-form-container input[type="email"],
+        .contact-form-container textarea {
+            width: calc(100% - 20px);
+            padding: 12px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            background-color: #2e3b52;
+            color: var(--text-light);
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+
+        .contact-form-container input[type="text"]:focus,
+        .contact-form-container input[type="email"]:focus,
+        .contact-form-container textarea:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px rgba(83, 52, 131, 0.5);
+        }
+
+        .contact-form-container textarea {
+            min-height: 150px;
+            resize: vertical;
+        }
+
+        .contact-form-container button {
+            background-color: var(--secondary-color);
+            color: var(--text-light);
+            padding: 15px 30px;
+            border: none;
+            border-radius: 5px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.3s ease;
+            display: block;
+            width: 100%;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+        }
+
+        .contact-form-container button:hover {
+            background-color: var(--accent-color);
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6);
+        }
+
+        /* Footer */
+        footer {
+            background-color: var(--primary-color);
+            color: var(--text-dark);
+            text-align: center;
+            padding: 30px 0;
+            border-top: 5px solid var(--accent-color);
+            margin-top: 40px;
+        }
+
+        .footer-links {
+            margin-top: 20px;
+        }
+
+        .footer-links a {
+            color: var(--text-dark);
+            margin: 0 15px;
+            font-size: 0.95rem;
+        }
+
+        .footer-links a:hover {
+            color: var(--secondary-color);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+
+            .hero p {
+                font-size: 1.1rem;
+            }
+
+            nav ul {
+                flex-direction: column;
+                align-items: center;
+                margin-top: 15px;
+            }
+
+            nav ul li {
+                margin: 10px 0;
+            }
+
+            header .container {
+                flex-direction: column;
+            }
+
+            .section-title {
+                font-size: 2rem;
+            }
+
+            .blog-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .about-content {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .about-image {
+                order: -1; /* Image appears before text on small screens */
+            }
+
+            .contact-form-container {
+                padding: 25px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .hero h1 {
+                font-size: 2rem;
+            }
+
+            .btn {
+                padding: 12px 25px;
+                font-size: 1rem;
+            }
+
+            .logo {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <a href="#home" class="logo">TechBlog</a>
+            <nav>
+                <ul>
+                    <li><a href="#home" class="nav-link active">Home</a></li>
+                    <li><a href="#featured-posts" class="nav-link">Featured</a></li>
+                    <li><a href="#categories" class="nav-link">Categories</a></li>
+                    <li><a href="#about" class="nav-link">About</a></li>
+                    <li><a href="#contact" class="nav-link">Contact</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <!-- Home Section -->
+        <section id="home" class="hero">
+            <div class="container">
+                <h1>Dive Into Tomorrow's Technology</h1>
+                <p>Unveiling the future, one byte at a time. Your source for cutting-edge tech analysis, innovation, and trends.</p>
+                <a href="#featured-posts" class="btn">Explore Posts</a>
+            </div>
+        </section>
+
+        <section id="featured-posts" class="container">
+            <h2 class="section-title">Featured Articles</h2>
+            <div class="blog-grid">
+                <div class="blog-post-card">
+                    <img src="https://images.unsplash.com/photo-1596542152843-16a7f8a7e0e7?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1770&q=80" alt="AI Revolution">
+                    <div class="card-content">
+                        <h3>The AI Revolution: Shaping Our Future</h3>
+                        <p>Explore how artificial intelligence is transforming industries and daily life, from advanced robotics to neural networks.</p>
+                        <a href="#" class="read-more">Read More</a>
+                    </div>
+                </div>
+                <div class="blog-post-card">
+                    <img src="https://images.unsplash.com/photo-1698642220455-89689f2a4058?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1770&q=80" alt="Quantum Computing">
+                    <div class="card-content">
+                        <h3>Quantum Computing: The Next Frontier</h3>
+                        <p>A deep dive into the mind-bending world of quantum mechanics and its potential to revolutionize computation.</p>
+                        <a href="#" class="read-more">Read More</a>
+                    </div>
+                </div>
+                <div class="blog-post-card">
+                    <img src="https://images.unsplash.com/photo-1628109968417-be0802773b06?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1770&q=80" alt="Metaverse Impact">
+                    <div class="card-content">
+                        <h3>The Metaverse: Beyond Virtual Reality</h3>
+                        <p>Understanding the immersive digital universes and their profound impact on social interaction, commerce, and entertainment.</p>
+                        <a href="#" class="read-more">Read More</a>
+                    </div>
+                </div>
+                <div class="blog-post-card">
+                    <img src="https://images.unsplash.com/photo-1509395273570-fd1131713838?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1770&q=80" alt="Green Tech Innovations">
+                    <div class="card-content">
+                        <h3>Green Tech: Innovating for a Sustainable Future</h3>
+                        <p>Discover how technology is tackling climate change, from renewable energy solutions to eco-friendly computing.</p>
+                        <a href="#" class="read-more">Read More</a>
+                    </div>
+                </div>
+                <div class="blog-post-card">
+                    <img src="https://images.unsplash.com/photo-1543722530-d2c320713404?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1770&q=80" alt="Space Exploration">
+                    <div class="card-content">
+                        <h3>The New Space Race: Commercializing the Cosmos</h3>
+                        <p>From private space tourism to asteroid mining, explore the burgeoning economy beyond Earth.</p>
+                        <a href="#" class="read-more">Read More</a>
+                    </div>
+                </div>
+                <div class="blog-post-card">
+                    <img src="https://images.unsplash.com/photo-1627052994993-271d499368ca?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1770&q=80" alt="Neurotechnology">
+                    <div class="card-content">
+                        <h3>Neurotech Horizons: Merging Minds with Machines</h3>
+                        <p>Delve into the revolutionary advancements in brain-computer interfaces and their ethical implications.</p>
+                        <a href="#" class="read-more">Read More</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Categories Section -->
+        <section id="categories" class="container">
+            <h2 class="section-title">Explore Categories</h2>
+            <div class="category-buttons">
+                <a href="#" class="category-btn">Artificial Intelligence</a>
+                <a href="#" class="category-btn">Quantum Computing</a>
+                <a href="#" class="category-btn">Cybersecurity</a>
+                <a href="#" class="category-btn">Robotics</a>
+                <a href="#" class="category-btn">Space Exploration</a>
+                <a href="#" class="category-btn">Biotechnology</a>
+                <a href="#" class="category-btn">Sustainable Tech</a>
+                <a href="#" class="category-btn">Augmented Reality</a>
+                <a href="#" class="category-btn">Nanotechnology</a>
+            </div>
+            <div class="blog-grid">
+                <div class="blog-post-card">
+                    <img src="https://images.unsplash.com/photo-1579567784013-41c33c3756c0?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1770&q=80" alt="Blockchain Security">
+                    <div class="card-content">
+                        <h3>Blockchain & Cybersecurity: A New Paradigm</h3>
+                        <p>How decentralized ledgers are enhancing security protocols and protecting digital assets.</p>
+                        <a href="#" class="read-more">Read More</a>
+                    </div>
+                </div>
+                <div class="blog-post-card">
+                    <img src="https://images.unsplash.com/photo-1535372403666-b2586f1e8e20?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1770&q=80" alt="Robotics Future">
+                    <div class="card-content">
+                        <h3>The Future of Robotics: From Industry to Home</h3>
+                        <p>Examining the latest advancements in robotic automation and their integration into everyday life.</p>
+                        <a href="#" class="read-more">Read More</a>
+                    </div>
+                </div>
+                <div class="blog-post-card">
+                    <img src="https://images.unsplash.com/photo-1616893663673-a6572e44d32e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1770&q=80" alt="AR in Education">
+                    <div class="card-content">
+                        <h3>AR in Education: Revolutionizing Learning</h3>
+                        <p>How augmented reality is transforming classrooms and making complex subjects interactive and engaging.</p>
+                        <a href="#" class="read-more">Read More</a>
+                    </div>
+                </div>
+                <div class="blog-post-card">
+                    <img src="https://images.unsplash.com/photo-1587127976860-264104c274b1?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1770&q=80" alt="Biotechnology">
+                    <div class="card-content">
+                        <h3>Biotech Breakthroughs: The Age of Genetic Innovation</h3>
+                        <p>From CRISPR to synthetic biology, explore the ethical and scientific frontiers of gene editing.</p>
+                        <a href="#" class="read-more">Read More</a>
+                    </div>
+                </div>
+                <div class="blog-post-card">
+                    <img src="https://images.unsplash.com/photo-1486795805565-d309015c7a36?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1770&q=80" alt="Sustainable Smart Cities">
+                    <div class="card-content">
+                        <h3>Building Tomorrow: The Rise of Sustainable Smart Cities</h3>
+                        <p>How integrated technology and green initiatives are creating more livable and efficient urban environments.</p>
+                        <a href="#" class="read-more">Read More</a>
+                    </div>
+                </div>
+                <div class="blog-post-card">
+                    <img src="https://images.unsplash.com/photo-1544837330-9b3780447335?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1770&q=80" alt="Advanced Materials">
+                    <div class="card-content">
+                        <h3>Nanotech Wonders: Engineering at the Atomic Scale</h3>
+                        <p>Discover the incredible potential of advanced materials and nanotechnology to revolutionize every industry.</p>
+                        <a href="#" class="read-more">Read More</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- About Page Section -->
+        <section id="about" class="container">
+            <h2 class="section-title">About TechBlog</h2>
+            <div class="about-content">
+                <div class="about-text">
+                    <h3>Our Mission</h3>
+                    <p>At TechBlog, we are passionate about the future. Our mission is to demystify complex technological concepts, provide insightful analysis, and keep our readers at the forefront of innovation. We believe that understanding tomorrow's tech today is crucial for shaping a better future.</p>
+                    <p>Founded in 2023, TechBlog was created by a team of enthusiastic tech professionals and writers dedicated to sharing their knowledge and excitement about the digital world. From artificial intelligence to quantum mechanics, we cover the topics that matter most.</p>
+                </div>
+                <div class="about-image">
+                    <img src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1770&q=80" alt="About Us Image">
+                </div>
+            </div>
+        </section>
+
+        <!-- Contact Page Section -->
+        <section id="contact" class="container">
+            <h2 class="section-title">Contact Us</h2>
+            <div class="contact-form-container">
+                <p style="text-align: center; color: var(--text-dark);">Have a question, feedback, or a topic suggestion? We'd love to hear from you!</p>
+                <form action="#" method="POST">
+                    <label for="name">Name:</label>
+                    <input type="text" id="name" name="name" required>
+
+                    <label for="email">Email:</label>
+                    <input type="email" id="email" name="email" required>
+
+                    <label for="subject">Subject:</label>
+                    <input type="text" id="subject" name="subject" required>
+
+                    <label for="message">Message:</label>
+                    <textarea id="message" name="message" required></textarea>
+
+                    <button type="submit">Send Message</button>
+                </form>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2023 TechBlog. All rights reserved.</p>
+            <div class="footer-links">
+                <a href="#home">Home</a> |
+                <a href="#about">About</a> |
+                <a href="#contact">Contact</a> |
+                <a href="#">Privacy Policy</a>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Simple JavaScript for active navigation link
+        document.addEventListener('DOMContentLoaded', function() {
+            const navLinks = document.querySelectorAll('.nav-link');
+            const sections = document.querySelectorAll('section');
+
+            const options = {
+                threshold: 0.5 // Adjust this value to change when the section becomes "active"
+            };
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        navLinks.forEach(link => {
+                            link.classList.remove('active');
+                            if (link.getAttribute('href') === `#${entry.target.id}`) {
+                                link.classList.add('active');
+                            }
+                        });
+                    }
+                });
+            }, options);
+
+            sections.forEach(section => {
+                observer.observe(section);
+            });
+
+            // Smooth scroll for nav links (optional, as CSS scroll-behavior: smooth is already there)
+            navLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    document.querySelector(this.getAttribute('href')).scrollIntoView({
+                        behavior: 'smooth'
+                    });
+                });
+            });
+        });
+    </script>
+</body>
+</html>
