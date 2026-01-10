@@ -3,49 +3,46 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Blog Builder: Multi-Session</title>
+    <title>AI Blog Builder: Master</title>
     <style>
         :root { --primary: #6366f1; --bg: #f8fafc; --dark: #1e293b; --light: #f1f5f9; }
         body { margin: 0; display: flex; height: 100vh; font-family: sans-serif; background: var(--bg); overflow: hidden; }
         
-        /* 1. PROJECT SIDEBAR (Far Left) */
-        .project-sidebar {
-            width: 200px; background: var(--dark); color: #94a3b8;
-            display: flex; flex-direction: column; padding: 10px;
-            border-right: 1px solid #334155;
-        }
-        .project-header { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; font-weight: bold; color: #fff; }
-        .project-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 5px; }
-        .project-item {
-            padding: 10px; cursor: pointer; border-radius: 6px; font-size: 0.9rem; transition: 0.2s;
-        }
+        /* SIDEBARS */
+        .project-sidebar { width: 220px; background: var(--dark); color: #94a3b8; display: flex; flex-direction: column; padding: 10px; border-right: 1px solid #334155; }
+        .project-header { font-size: 0.8rem; font-weight: bold; color: #fff; margin-bottom: 10px; letter-spacing: 0.5px; }
+        .project-item { padding: 10px; cursor: pointer; border-radius: 6px; font-size: 0.9rem; margin-bottom: 4px; transition: 0.2s; }
         .project-item:hover { background: #334155; color: #fff; }
         .project-item.active { background: var(--primary); color: white; }
-        
-        .new-project-btn {
-            margin-top: 10px; padding: 10px; background: #334155; color: white; 
-            border: 1px dashed #64748b; border-radius: 6px; cursor: pointer; text-align: center; font-size: 0.8rem;
-        }
-        .new-project-btn:hover { background: #475569; border-color: #fff; }
+        .new-btn { margin-top: 10px; padding: 8px; background: #334155; color: #fff; text-align: center; border-radius: 6px; cursor: pointer; font-size: 0.8rem; border: 1px dashed #64748b; }
+        .new-btn:hover { border-color: #fff; background: #475569; }
 
-        /* 2. TOOL SIDEBAR (Middle) */
-        .tool-sidebar { width: 350px; background: #fff; border-right: 1px solid #e2e8f0; display: flex; flex-direction: column; }
+        .tool-sidebar { width: 340px; background: #fff; border-right: 1px solid #e2e8f0; display: flex; flex-direction: column; }
         .tabs { display: flex; border-bottom: 1px solid #e2e8f0; background: var(--light); }
-        .tab { flex: 1; padding: 12px; border: none; cursor: pointer; font-weight: 600; color: #64748b; }
+        .tab { flex: 1; padding: 12px; border: none; cursor: pointer; font-weight: 600; color: #64748b; background: transparent; }
         .tab.active { background: #fff; color: var(--primary); border-bottom: 2px solid var(--primary); }
-        .content-area { flex: 1; padding: 20px; display: none; flex-direction: column; gap: 10px; overflow-y: auto; }
+        .content-area { flex: 1; padding: 20px; display: none; flex-direction: column; gap: 15px; overflow-y: auto; }
         .content-area.active { display: flex; }
-        
-        textarea { width: 100%; height: 100px; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; resize: none; }
-        button.action-btn { background: var(--primary); color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; font-weight: 600; }
-        button.action-btn:disabled { background: #94a3b8; }
 
-        /* 3. PREVIEW AREA (Right) */
+        /* INPUTS */
+        textarea { width: 100%; height: 100px; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; resize: none; font-family: inherit; box-sizing: border-box; }
+        button.action-btn { background: var(--primary); color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; font-weight: 600; width: 100%; }
+        button.action-btn:disabled { background: #94a3b8; cursor: wait; }
+        
+        /* DESIGN TAB */
+        .color-row { display: flex; align-items: center; justify-content: space-between; padding: 8px; background: #f8fafc; border-radius: 6px; border: 1px solid #e2e8f0; }
+        .color-label { font-size: 0.85rem; font-family: monospace; color: #475569; }
+        input[type="color"] { border: none; width: 40px; height: 40px; cursor: pointer; background: none; }
+
+        /* NEWS TOGGLE */
+        .news-toggle { display: flex; align-items: center; gap: 10px; background: #eff6ff; padding: 10px; border-radius: 6px; border: 1px solid #bfdbfe; }
+        .news-toggle input { width: 16px; height: 16px; accent-color: var(--primary); }
+
+        /* PREVIEW */
         .preview-area { flex: 1; display: flex; flex-direction: column; background: #fff; }
         .top-bar { padding: 10px 20px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
-        iframe { flex: 1; border: none; }
-
-        /* Switch Toggle */
+        
+        /* SWITCH */
         .switch { position: relative; display: inline-block; width: 34px; height: 20px; }
         .switch input { opacity: 0; width: 0; height: 0; }
         .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 20px; }
@@ -53,41 +50,55 @@
         input:checked + .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; border-radius: 50%; transform: translateX(0); transition: .4s; }
         input:checked + .slider:before { transform: translateX(14px); }
 
-        .code-editor { flex:1; background: #1e293b; color: #cbd5e1; font-family: monospace; padding: 10px; border:none; resize: none; }
+        iframe { flex: 1; border: none; }
     </style>
 </head>
 <body>
 
     <div class="project-sidebar">
-        <div class="project-header">MY BLOGS</div>
-        <div id="projectList" class="project-list">
-            </div>
-        <div class="new-project-btn" onclick="createNewProject()">+ New Blog Session</div>
+        <div class="project-header">MY PROJECTS</div>
+        <div id="projectList" style="flex:1; overflow-y:auto;"></div>
+        <div class="new-btn" onclick="createNewProject()">+ New Project</div>
     </div>
 
     <div class="tool-sidebar">
         <div class="tabs">
-            <button class="tab active" onclick="switchTab('ai')">🤖 AI Builder</button>
+            <button class="tab active" onclick="switchTab('ai')">🤖 AI</button>
+            <button class="tab" onclick="switchTab('design')">🎨 Design</button>
             <button class="tab" onclick="switchTab('code')">💻 Code</button>
         </div>
 
         <div id="ai-panel" class="content-area active">
-            <h3>AI Instructions</h3>
-            <p id="currentProjectLabel" style="font-size:0.8rem; color:var(--primary);">No project selected</p>
-            <textarea id="prompt" placeholder="e.g. Add a contact form..."></textarea>
+            <div style="font-size:0.8rem; color:var(--primary); font-weight:bold;" id="currentLabel">No Project Selected</div>
+            
+            <div class="news-toggle">
+                <input type="checkbox" id="newsMode">
+                <div>
+                    <strong style="display:block; font-size:0.9rem; color:#1e40af;">🌍 News Mode</strong>
+                    <span style="font-size:0.75rem; color:#60a5fa;">Search Google for real-time info</span>
+                </div>
+            </div>
+
+            <textarea id="prompt" placeholder="e.g. Write a blog about the latest AI news..."></textarea>
             <button id="genBtn" class="action-btn" onclick="handleGenerate()">Run Update</button>
-            
-            <hr style="margin:20px 0; border:0; border-top:1px solid #eee;">
-            
+
+            <hr style="border:0; border-top:1px solid #eee; width:100%;">
             <h3>Upload Asset</h3>
             <input type="file" id="fileInput">
-            <div id="uploadResult" style="margin-top:10px; font-size:0.8rem; color:green;"></div>
+            <div id="uploadResult" style="font-size:0.75rem; color:green; margin-top:5px;"></div>
             
-            <button style="margin-top:auto; background:#334155;" class="action-btn" onclick="downloadCurrent()">Download HTML ⬇️</button>
+            <button class="action-btn" style="background:#334155; margin-top:auto;" onclick="downloadCurrent()">Download HTML ⬇️</button>
+        </div>
+
+        <div id="design-panel" class="content-area">
+            <h3>Color Palette</h3>
+            <p style="font-size:0.8rem; color:#64748b;">Detected from :root variables</p>
+            <div id="colorList"></div>
+            <button class="action-btn" onclick="refreshColorsFromCode()">↻ Rescan Colors</button>
         </div>
 
         <div id="code-panel" class="content-area">
-            <textarea id="codeEditor" class="code-editor" spellcheck="false"></textarea>
+            <textarea id="codeEditor" style="flex:1; background:#1e293b; color:#cbd5e1; font-family:monospace;" spellcheck="false"></textarea>
             <button class="action-btn" onclick="saveManualCode()">Save Code</button>
         </div>
     </div>
@@ -95,10 +106,11 @@
     <div class="preview-area">
         <div class="top-bar">
             <strong>Live Preview</strong>
+            
             <div style="display:flex; align-items:center; gap:10px;">
                 <span style="font-size:0.8rem;">Visual Edit</span>
                 <label class="switch"><input type="checkbox" id="visualToggle" onchange="toggleVisualEdit()"><span class="slider"></span></label>
-                <button id="saveVisualBtn" onclick="saveVisualChanges()" style="display:none; background:#22c55e; color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;">Save Visual</button>
+                <button id="saveVisualBtn" onclick="saveVisualChanges()" style="display:none; background:#22c55e; color:white; border:none; padding:5px 12px; border-radius:4px; cursor:pointer; font-weight:bold;">Save Changes</button>
             </div>
         </div>
         <iframe id="previewFrame"></iframe>
@@ -106,124 +118,175 @@
 
     <script>
         let currentFilename = "";
-        let elementVault = new Map();
+        let elementVault = new Map(); // Vault for robust editing
 
-        // --- INIT ---
         window.onload = loadProjects;
 
+        // --- 1. PROJECT MANAGEMENT ---
         async function loadProjects() {
             const res = await fetch('/projects');
             const data = await res.json();
             const list = document.getElementById('projectList');
             list.innerHTML = "";
             
-            if (data.projects.length === 0) {
-                createNewProject("my_first_blog");
+            if(data.projects.length === 0) {
+                createNewProject("MyFirstSite");
             } else {
                 data.projects.forEach(p => {
-                    const div = document.createElement('div');
-                    div.className = 'project-item';
-                    div.innerText = p.replace('.html', '');
-                    div.onclick = () => selectProject(p);
-                    list.appendChild(div);
+                    const d = document.createElement('div');
+                    d.className = 'project-item';
+                    d.innerText = p.replace('.html','');
+                    d.onclick = () => selectProject(p);
+                    list.appendChild(d);
                 });
-                // Auto-select first one if none selected
-                if (!currentFilename) selectProject(data.projects[0]);
+                if(!currentFilename) selectProject(data.projects[0]);
             }
         }
 
-        async function createNewProject(forceName) {
-            const name = forceName || prompt("Name your new blog (e.g., 'FoodBlog'):");
-            if (!name) return;
-            
+        async function createNewProject(name) {
+            name = name || prompt("New Project Name (no spaces):");
+            if(!name) return;
             const res = await fetch('/create_project', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ name: name })
+                method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name})
             });
             const data = await res.json();
-            if(data.success) {
-                loadProjects(); // Reload list
-                selectProject(data.filename);
-            } else {
-                alert(data.error);
-            }
+            if(data.success) { loadProjects(); selectProject(data.filename); }
+            else { alert(data.error || "Failed"); }
         }
 
-        function selectProject(filename) {
-            currentFilename = filename;
-            document.getElementById('currentProjectLabel').innerText = "Editing: " + filename;
-            document.getElementById('previewFrame').src = "/preview/" + filename;
-            
-            // Update UI Active State
-            document.querySelectorAll('.project-item').forEach(el => {
-                el.classList.remove('active');
-                if(el.innerText === filename.replace('.html','')) el.classList.add('active');
+        function selectProject(f) {
+            currentFilename = f;
+            document.getElementById('currentLabel').innerText = "Editing: " + f;
+            document.getElementById('previewFrame').src = "/preview/" + f;
+            document.querySelectorAll('.project-item').forEach(e => {
+                e.classList.remove('active');
+                if(e.innerText === f.replace('.html','')) e.classList.add('active');
             });
+            setTimeout(refreshColorsFromCode, 500);
         }
 
-        // --- CORE FUNCTIONS (Now passing 'filename') ---
-
+        // --- 2. AI & NEWS ---
         async function handleGenerate() {
-            if(!currentFilename) return alert("Select a project first!");
+            if(!currentFilename) return;
             const prompt = document.getElementById('prompt').value;
+            const useNews = document.getElementById('newsMode').checked;
             const btn = document.getElementById('genBtn');
-            btn.disabled = true; btn.innerText = "Processing...";
             
+            btn.disabled = true; 
+            btn.innerText = useNews ? "Searching & Writing..." : "Building...";
+
             await fetch('/generate', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ prompt: prompt, filename: currentFilename })
+                body: JSON.stringify({ prompt, filename: currentFilename, use_news: useNews })
             });
-            
+
             refreshPreview();
             btn.disabled = false; btn.innerText = "Run Update";
+            refreshColorsFromCode();
         }
 
-        async function loadCodeIntoEditor() {
-            if(!currentFilename) return;
+        // --- 3. COLOR PICKER ---
+        async function refreshColorsFromCode() {
             const res = await fetch('/get_code/' + currentFilename);
             const data = await res.json();
-            document.getElementById('codeEditor').value = data.code;
+            const list = document.getElementById('colorList');
+            list.innerHTML = "";
+
+            const rootMatch = data.code.match(/:root\s*{([^}]+)}/);
+            if(rootMatch) {
+                const colorRegex = /(--[\w-]+)\s*:\s*(#[0-9a-fA-F]{3,6})/g;
+                let match;
+                while ((match = colorRegex.exec(rootMatch[1])) !== null) {
+                    createColorPicker(match[1], match[2], list);
+                }
+            } else {
+                list.innerHTML = "<p style='font-size:0.8rem; padding:10px;'>No CSS variables found in :root</p>";
+            }
         }
 
-        async function saveManualCode() {
-            const code = document.getElementById('codeEditor').value;
+        function createColorPicker(varName, hexValue, container) {
+            const row = document.createElement('div');
+            row.className = 'color-row';
+            row.innerHTML = `<span class="color-label">${varName}</span>`;
+            
+            const input = document.createElement('input');
+            input.type = 'color';
+            input.value = hexValue;
+            input.addEventListener('input', async (e) => await updateColorInCode(varName, e.target.value));
+            
+            row.appendChild(input);
+            container.appendChild(row);
+        }
+
+        async function updateColorInCode(varName, newColor) {
+            const res = await fetch('/get_code/' + currentFilename);
+            const data = await res.json();
+            let code = data.code;
+            
+            const regex = new RegExp(`(${varName}\\s*:\\s*)(#[0-9a-fA-F]{3,6})`, 'g');
+            code = code.replace(regex, `$1${newColor}`);
+            
             await fetch('/save_code', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ code: code, filename: currentFilename })
+                method: 'POST', headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({ code, filename: currentFilename })
             });
-            refreshPreview();
+            // Live update CSS variable in iframe
+            const doc = document.getElementById('previewFrame').contentDocument;
+            if(doc) doc.documentElement.style.setProperty(varName, newColor);
         }
 
-        function downloadCurrent() {
-            if(currentFilename) window.location.href = "/download/" + currentFilename;
-        }
-
-        function refreshPreview() {
-            document.getElementById('previewFrame').src = "/preview/" + currentFilename + "?t=" + new Date().getTime();
-        }
-
-        // --- VISUAL EDIT (Vault Method) ---
-        // Copying the robust logic from previous step
+        // --- 4. VISUAL EDIT (THE VAULT METHOD) ---
         function toggleVisualEdit() {
-            const iframe = document.getElementById('previewFrame');
-            const doc = iframe.contentDocument;
             const isOn = document.getElementById('visualToggle').checked;
+            const doc = document.getElementById('previewFrame').contentDocument;
+            const win = document.getElementById('previewFrame').contentWindow;
 
             if (isOn) {
-                // Sanitize
-                doc.querySelectorAll('[style*="display: none"]').forEach(el => el.remove());
-                elementVault.clear();
+                // A. Sanitize Zombies
+                doc.querySelectorAll('[style*="display: none"], [style*="display:none"]').forEach(el => {
+                   if(el.tagName === 'BUTTON' || el.tagName === 'A') el.remove(); 
+                });
 
+                // B. Enable Edit
                 doc.body.contentEditable = "true";
                 doc.designMode = "on";
                 document.getElementById('saveVisualBtn').style.display = "block";
+                elementVault.clear();
 
-                // Vault Swap logic... (Simplified for brevity, assumes standard buttons)
-                // Use the exact same logic as your last robust version here if needed.
-                // For now, basic editable mode is enabled.
+                // C. Vault Swap (Interactive Elements -> Editable Spans)
+                const interactiveElements = Array.from(doc.querySelectorAll('a, button, [onclick], input[type="button"], input[type="submit"]'));
+                
+                interactiveElements.forEach((el, index) => {
+                    const style = win.getComputedStyle(el);
+                    const clone = doc.createElement('span');
+                    
+                    clone.innerHTML = el.innerHTML;
+                    clone.className = el.className;
+                    
+                    // Copy Computed Styles
+                    clone.style.backgroundColor = style.backgroundColor;
+                    clone.style.border = style.border;
+                    clone.style.borderRadius = style.borderRadius;
+                    clone.style.padding = style.padding;
+                    clone.style.margin = style.margin;
+                    clone.style.color = style.color;
+                    clone.style.font = style.font;
+                    clone.style.display = style.display === 'inline' ? 'inline-block' : style.display;
+                    clone.style.width = style.width;
+                    clone.style.height = style.height;
+                    clone.style.boxSizing = "border-box"; 
+                    
+                    // Edit cues
+                    clone.style.cursor = "text";
+                    clone.style.outline = "2px dashed #ec4899"; 
+
+                    const vaultId = "vault_" + index + "_" + Math.random().toString(36).substr(2, 9);
+                    clone.setAttribute('data-vault-id', vaultId);
+                    elementVault.set(vaultId, el); // Store original in memory
+                    
+                    if(el.parentNode) el.parentNode.replaceChild(clone, el);
+                });
 
             } else {
                 document.getElementById('saveVisualBtn').style.display = "none";
@@ -233,48 +296,72 @@
 
         async function saveVisualChanges() {
             const doc = document.getElementById('previewFrame').contentDocument;
-            doc.body.contentEditable = "false"; 
-            doc.designMode = "off";
             
-            const html = "<!DOCTYPE html>\n<html>" + doc.documentElement.innerHTML + "</html>";
-            
-            await fetch('/save_code', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ code: html, filename: currentFilename })
+            // Restore from Vault
+            const clones = Array.from(doc.querySelectorAll('[data-vault-id]'));
+            clones.forEach(clone => {
+                const id = clone.getAttribute('data-vault-id');
+                if (elementVault.has(id)) {
+                    const original = elementVault.get(id);
+                    original.innerHTML = clone.innerHTML; 
+                    if(clone.parentNode) clone.parentNode.replaceChild(original, clone);
+                } else {
+                    clone.remove();
+                }
             });
+
+            doc.body.contentEditable = "false";
+            doc.designMode = "off";
+
+            const fullHTML = "<!DOCTYPE html>\n<html>" + doc.documentElement.innerHTML + "</html>";
+            await fetch('/save_code', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({code: fullHTML, filename:currentFilename}) });
             
             document.getElementById('visualToggle').checked = false;
             document.getElementById('saveVisualBtn').style.display = "none";
+            elementVault.clear();
             refreshPreview();
         }
 
-        // Upload
-        document.getElementById('fileInput').addEventListener('change', async function() {
-            const formData = new FormData();
-            formData.append('file', this.files[0]);
-            const res = await fetch('/upload_asset', { method: 'POST', body: formData });
-            const data = await res.json();
-            if(data.success) {
-                document.getElementById('uploadResult').innerText = "Snippet: " + data.snippet;
-                navigator.clipboard.writeText(data.snippet);
-                alert("Snippet copied to clipboard!");
-            }
-        });
-
-        // Tabs
+        // --- UTILS ---
         function switchTab(t) {
             document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
             document.querySelectorAll('.content-area').forEach(x => x.classList.remove('active'));
             if(t==='ai') { 
                 document.querySelector('.tab:nth-child(1)').classList.add('active'); 
                 document.getElementById('ai-panel').classList.add('active'); 
-            } else { 
+            } else if(t==='design') {
                 document.querySelector('.tab:nth-child(2)').classList.add('active'); 
+                document.getElementById('design-panel').classList.add('active');
+                refreshColorsFromCode();
+            } else { 
+                document.querySelector('.tab:nth-child(3)').classList.add('active'); 
                 document.getElementById('code-panel').classList.add('active'); 
                 loadCodeIntoEditor(); 
             }
         }
+
+        async function loadCodeIntoEditor() {
+            const res = await fetch('/get_code/' + currentFilename);
+            const data = await res.json();
+            document.getElementById('codeEditor').value = data.code;
+        }
+
+        async function saveManualCode() {
+            const code = document.getElementById('codeEditor').value;
+            await fetch('/save_code', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({code, filename:currentFilename}) });
+            refreshPreview();
+        }
+
+        document.getElementById('fileInput').addEventListener('change', async function() {
+            const fd = new FormData(); fd.append('file', this.files[0]);
+            const res = await fetch('/upload_asset', { method:'POST', body:fd });
+            const d = await res.json();
+            if(d.success) document.getElementById('uploadResult').innerText = "Snippet copied: " + d.snippet;
+            navigator.clipboard.writeText(d.snippet);
+        });
+
+        function downloadCurrent() { window.location.href = "/download/" + currentFilename; }
+        function refreshPreview() { document.getElementById('previewFrame').src = "/preview/" + currentFilename + "?t=" + Date.now(); }
     </script>
 </body>
 </html>
