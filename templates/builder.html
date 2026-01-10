@@ -3,19 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Blog Builder: Master</title>
+    <title>AI Blog Builder: Time Machine</title>
     <style>
         :root { --primary: #6366f1; --bg: #f8fafc; --dark: #1e293b; --light: #f1f5f9; }
         body { margin: 0; display: flex; height: 100vh; font-family: sans-serif; background: var(--bg); overflow: hidden; }
         
         /* SIDEBARS */
         .project-sidebar { width: 220px; background: var(--dark); color: #94a3b8; display: flex; flex-direction: column; padding: 10px; border-right: 1px solid #334155; }
-        .project-header { font-size: 0.8rem; font-weight: bold; color: #fff; margin-bottom: 10px; letter-spacing: 0.5px; }
-        .project-item { padding: 10px; cursor: pointer; border-radius: 6px; font-size: 0.9rem; margin-bottom: 4px; transition: 0.2s; }
-        .project-item:hover { background: #334155; color: #fff; }
+        .project-header { font-size: 0.8rem; font-weight: bold; color: #fff; margin-bottom: 10px; }
+        .project-item { padding: 10px; cursor: pointer; border-radius: 6px; font-size: 0.9rem; margin-bottom: 4px; }
         .project-item.active { background: var(--primary); color: white; }
-        .new-btn { margin-top: 10px; padding: 8px; background: #334155; color: #fff; text-align: center; border-radius: 6px; cursor: pointer; font-size: 0.8rem; border: 1px dashed #64748b; }
-        .new-btn:hover { border-color: #fff; background: #475569; }
+        .new-btn { margin-top: 10px; padding: 8px; background: #334155; color: #fff; text-align: center; border-radius: 6px; cursor: pointer; }
 
         .tool-sidebar { width: 340px; background: #fff; border-right: 1px solid #e2e8f0; display: flex; flex-direction: column; }
         .tabs { display: flex; border-bottom: 1px solid #e2e8f0; background: var(--light); }
@@ -24,33 +22,29 @@
         .content-area { flex: 1; padding: 20px; display: none; flex-direction: column; gap: 15px; overflow-y: auto; }
         .content-area.active { display: flex; }
 
-        /* INPUTS */
-        textarea { width: 100%; height: 100px; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; resize: none; font-family: inherit; box-sizing: border-box; }
+        /* INPUTS & BUTTONS */
+        textarea { width: 100%; height: 100px; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; resize: none; box-sizing: border-box; }
         button.action-btn { background: var(--primary); color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; font-weight: 600; width: 100%; }
-        button.action-btn:disabled { background: #94a3b8; cursor: wait; }
         
-        /* DESIGN TAB */
-        .color-row { display: flex; align-items: center; justify-content: space-between; padding: 8px; background: #f8fafc; border-radius: 6px; border: 1px solid #e2e8f0; }
-        .color-label { font-size: 0.85rem; font-family: monospace; color: #475569; }
-        input[type="color"] { border: none; width: 40px; height: 40px; cursor: pointer; background: none; }
-
-        /* NEWS TOGGLE */
-        .news-toggle { display: flex; align-items: center; gap: 10px; background: #eff6ff; padding: 10px; border-radius: 6px; border: 1px solid #bfdbfe; }
-        .news-toggle input { width: 16px; height: 16px; accent-color: var(--primary); }
+        /* HISTORY ITEMS */
+        .history-item { background: #f1f5f9; padding: 10px; border-radius: 6px; border: 1px solid #e2e8f0; font-size: 0.85rem; display: flex; flex-direction: column; gap: 5px; }
+        .history-time { font-weight: bold; color: #334155; font-size: 0.8rem; }
+        .history-label { color: #64748b; font-style: italic; }
+        .restore-btn { align-self: flex-start; background: #cbd5e1; border: none; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; color: #1e293b; }
+        .restore-btn:hover { background: #f43f5e; color: white; }
 
         /* PREVIEW */
         .preview-area { flex: 1; display: flex; flex-direction: column; background: #fff; }
         .top-bar { padding: 10px 20px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
+        iframe { flex: 1; border: none; }
         
-        /* SWITCH */
+        /* DESIGN & TOGGLES */
+        .color-row { display: flex; justify-content: space-between; padding: 8px; background: #f8fafc; border-radius: 6px; }
         .switch { position: relative; display: inline-block; width: 34px; height: 20px; }
         .switch input { opacity: 0; width: 0; height: 0; }
         .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 20px; }
         input:checked + .slider { background-color: var(--primary); }
-        input:checked + .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; border-radius: 50%; transform: translateX(0); transition: .4s; }
-        input:checked + .slider:before { transform: translateX(14px); }
-
-        iframe { flex: 1; border: none; }
+        input:checked + .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; border-radius: 50%; transform: translateX(14px); }
     </style>
 </head>
 <body>
@@ -65,36 +59,39 @@
         <div class="tabs">
             <button class="tab active" onclick="switchTab('ai')">🤖 AI</button>
             <button class="tab" onclick="switchTab('design')">🎨 Design</button>
+            <button class="tab" onclick="switchTab('history')">🕒 History</button>
             <button class="tab" onclick="switchTab('code')">💻 Code</button>
         </div>
 
         <div id="ai-panel" class="content-area active">
-            <div style="font-size:0.8rem; color:var(--primary); font-weight:bold;" id="currentLabel">No Project Selected</div>
+            <div style="font-size:0.8rem; color:var(--primary); font-weight:bold;" id="currentLabel">Select a project</div>
             
-            <div class="news-toggle">
-                <input type="checkbox" id="newsMode">
-                <div>
-                    <strong style="display:block; font-size:0.9rem; color:#1e40af;">🌍 News Mode</strong>
-                    <span style="font-size:0.75rem; color:#60a5fa;">Search Google for real-time info</span>
-                </div>
-            </div>
+            <label style="display:flex; align-items:center; gap:8px; font-size:0.9rem;">
+                <input type="checkbox" id="newsMode"> 🌍 News Mode (Google Search)
+            </label>
 
-            <textarea id="prompt" placeholder="e.g. Write a blog about the latest AI news..."></textarea>
+            <textarea id="prompt" placeholder="e.g. Add a contact form..."></textarea>
             <button id="genBtn" class="action-btn" onclick="handleGenerate()">Run Update</button>
 
             <hr style="border:0; border-top:1px solid #eee; width:100%;">
             <h3>Upload Asset</h3>
             <input type="file" id="fileInput">
-            <div id="uploadResult" style="font-size:0.75rem; color:green; margin-top:5px;"></div>
+            <div id="uploadResult" style="font-size:0.75rem; color:green;"></div>
             
             <button class="action-btn" style="background:#334155; margin-top:auto;" onclick="downloadCurrent()">Download HTML ⬇️</button>
         </div>
 
         <div id="design-panel" class="content-area">
             <h3>Color Palette</h3>
-            <p style="font-size:0.8rem; color:#64748b;">Detected from :root variables</p>
             <div id="colorList"></div>
             <button class="action-btn" onclick="refreshColorsFromCode()">↻ Rescan Colors</button>
+        </div>
+        
+        <div id="history-panel" class="content-area">
+            <h3>Time Machine</h3>
+            <p style="font-size:0.8rem; color:#64748b;">Previous versions of this project.</p>
+            <button class="action-btn" style="padding:8px; font-size:0.8rem; background:#475569;" onclick="loadHistory()">↻ Refresh History</button>
+            <div id="historyList" style="display:flex; flex-direction:column; gap:10px;"></div>
         </div>
 
         <div id="code-panel" class="content-area">
@@ -106,11 +103,10 @@
     <div class="preview-area">
         <div class="top-bar">
             <strong>Live Preview</strong>
-            
             <div style="display:flex; align-items:center; gap:10px;">
                 <span style="font-size:0.8rem;">Visual Edit</span>
                 <label class="switch"><input type="checkbox" id="visualToggle" onchange="toggleVisualEdit()"><span class="slider"></span></label>
-                <button id="saveVisualBtn" onclick="saveVisualChanges()" style="display:none; background:#22c55e; color:white; border:none; padding:5px 12px; border-radius:4px; cursor:pointer; font-weight:bold;">Save Changes</button>
+                <button id="saveVisualBtn" onclick="saveVisualChanges()" style="display:none; background:#22c55e; color:white; border:none; padding:5px 12px; border-radius:4px; cursor:pointer;">Save Changes</button>
             </div>
         </div>
         <iframe id="previewFrame"></iframe>
@@ -118,20 +114,17 @@
 
     <script>
         let currentFilename = "";
-        let elementVault = new Map(); // Vault for robust editing
+        let elementVault = new Map();
 
         window.onload = loadProjects;
 
-        // --- 1. PROJECT MANAGEMENT ---
         async function loadProjects() {
             const res = await fetch('/projects');
             const data = await res.json();
             const list = document.getElementById('projectList');
             list.innerHTML = "";
-            
-            if(data.projects.length === 0) {
-                createNewProject("MyFirstSite");
-            } else {
+            if(data.projects.length === 0) createNewProject("MyFirstSite");
+            else {
                 data.projects.forEach(p => {
                     const d = document.createElement('div');
                     d.className = 'project-item';
@@ -144,14 +137,11 @@
         }
 
         async function createNewProject(name) {
-            name = name || prompt("New Project Name (no spaces):");
+            name = name || prompt("Project Name:");
             if(!name) return;
-            const res = await fetch('/create_project', {
-                method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name})
-            });
+            const res = await fetch('/create_project', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name}) });
             const data = await res.json();
             if(data.success) { loadProjects(); selectProject(data.filename); }
-            else { alert(data.error || "Failed"); }
         }
 
         function selectProject(f) {
@@ -162,37 +152,61 @@
                 e.classList.remove('active');
                 if(e.innerText === f.replace('.html','')) e.classList.add('active');
             });
-            setTimeout(refreshColorsFromCode, 500);
+            setTimeout(() => { refreshColorsFromCode(); loadHistory(); }, 500);
         }
 
-        // --- 2. AI & NEWS ---
+        // --- AI & HISTORY ---
         async function handleGenerate() {
             if(!currentFilename) return;
             const prompt = document.getElementById('prompt').value;
             const useNews = document.getElementById('newsMode').checked;
             const btn = document.getElementById('genBtn');
-            
-            btn.disabled = true; 
-            btn.innerText = useNews ? "Searching & Writing..." : "Building...";
+            btn.disabled = true; btn.innerText = "Processing...";
 
-            await fetch('/generate', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ prompt, filename: currentFilename, use_news: useNews })
-            });
-
+            await fetch('/generate', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ prompt, filename: currentFilename, use_news: useNews }) });
             refreshPreview();
             btn.disabled = false; btn.innerText = "Run Update";
-            refreshColorsFromCode();
+            loadHistory(); // Update history list
         }
 
-        // --- 3. COLOR PICKER ---
+        async function loadHistory() {
+            if(!currentFilename) return;
+            const res = await fetch('/history/' + currentFilename);
+            const data = await res.json();
+            const list = document.getElementById('historyList');
+            list.innerHTML = "";
+            
+            data.history.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'history-item';
+                div.innerHTML = `
+                    <div class="history-time">${item.time}</div>
+                    <div class="history-label">${item.label}</div>
+                    <button class="restore-btn" onclick="restoreVersion('${item.file}')">↺ Restore this version</button>
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        async function restoreVersion(backupFile) {
+            if(!confirm("Are you sure? This will overwrite your current version.")) return;
+            const res = await fetch('/restore', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ filename: currentFilename, backup_file: backupFile })
+            });
+            if(res.ok) {
+                alert("Restored successfully!");
+                refreshPreview();
+                loadHistory(); // Refreshes to show the backup created before restore
+            }
+        }
+
+        // --- COLOR PICKER ---
         async function refreshColorsFromCode() {
             const res = await fetch('/get_code/' + currentFilename);
             const data = await res.json();
             const list = document.getElementById('colorList');
             list.innerHTML = "";
-
             const rootMatch = data.code.match(/:root\s*{([^}]+)}/);
             if(rootMatch) {
                 const colorRegex = /(--[\w-]+)\s*:\s*(#[0-9a-fA-F]{3,6})/g;
@@ -200,144 +214,35 @@
                 while ((match = colorRegex.exec(rootMatch[1])) !== null) {
                     createColorPicker(match[1], match[2], list);
                 }
-            } else {
-                list.innerHTML = "<p style='font-size:0.8rem; padding:10px;'>No CSS variables found in :root</p>";
             }
         }
-
         function createColorPicker(varName, hexValue, container) {
             const row = document.createElement('div');
             row.className = 'color-row';
-            row.innerHTML = `<span class="color-label">${varName}</span>`;
-            
+            row.innerHTML = `<span style="font-family:monospace;font-size:0.8rem;">${varName}</span>`;
             const input = document.createElement('input');
-            input.type = 'color';
-            input.value = hexValue;
+            input.type = 'color'; input.value = hexValue; input.style.border="none"; input.style.background="none";
             input.addEventListener('input', async (e) => await updateColorInCode(varName, e.target.value));
-            
-            row.appendChild(input);
-            container.appendChild(row);
+            row.appendChild(input); container.appendChild(row);
         }
-
         async function updateColorInCode(varName, newColor) {
             const res = await fetch('/get_code/' + currentFilename);
             const data = await res.json();
             let code = data.code;
-            
             const regex = new RegExp(`(${varName}\\s*:\\s*)(#[0-9a-fA-F]{3,6})`, 'g');
             code = code.replace(regex, `$1${newColor}`);
-            
-            await fetch('/save_code', {
-                method: 'POST', headers:{'Content-Type':'application/json'},
-                body: JSON.stringify({ code, filename: currentFilename })
-            });
-            // Live update CSS variable in iframe
-            const doc = document.getElementById('previewFrame').contentDocument;
-            if(doc) doc.documentElement.style.setProperty(varName, newColor);
+            await fetch('/save_code', { method: 'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ code, filename: currentFilename }) });
+            document.getElementById('previewFrame').contentDocument.documentElement.style.setProperty(varName, newColor);
         }
 
-        // --- 4. VISUAL EDIT (THE VAULT METHOD) ---
-        function toggleVisualEdit() {
-            const isOn = document.getElementById('visualToggle').checked;
-            const doc = document.getElementById('previewFrame').contentDocument;
-            const win = document.getElementById('previewFrame').contentWindow;
-
-            if (isOn) {
-                // A. Sanitize Zombies
-                doc.querySelectorAll('[style*="display: none"], [style*="display:none"]').forEach(el => {
-                   if(el.tagName === 'BUTTON' || el.tagName === 'A') el.remove(); 
-                });
-
-                // B. Enable Edit
-                doc.body.contentEditable = "true";
-                doc.designMode = "on";
-                document.getElementById('saveVisualBtn').style.display = "block";
-                elementVault.clear();
-
-                // C. Vault Swap (Interactive Elements -> Editable Spans)
-                const interactiveElements = Array.from(doc.querySelectorAll('a, button, [onclick], input[type="button"], input[type="submit"]'));
-                
-                interactiveElements.forEach((el, index) => {
-                    const style = win.getComputedStyle(el);
-                    const clone = doc.createElement('span');
-                    
-                    clone.innerHTML = el.innerHTML;
-                    clone.className = el.className;
-                    
-                    // Copy Computed Styles
-                    clone.style.backgroundColor = style.backgroundColor;
-                    clone.style.border = style.border;
-                    clone.style.borderRadius = style.borderRadius;
-                    clone.style.padding = style.padding;
-                    clone.style.margin = style.margin;
-                    clone.style.color = style.color;
-                    clone.style.font = style.font;
-                    clone.style.display = style.display === 'inline' ? 'inline-block' : style.display;
-                    clone.style.width = style.width;
-                    clone.style.height = style.height;
-                    clone.style.boxSizing = "border-box"; 
-                    
-                    // Edit cues
-                    clone.style.cursor = "text";
-                    clone.style.outline = "2px dashed #ec4899"; 
-
-                    const vaultId = "vault_" + index + "_" + Math.random().toString(36).substr(2, 9);
-                    clone.setAttribute('data-vault-id', vaultId);
-                    elementVault.set(vaultId, el); // Store original in memory
-                    
-                    if(el.parentNode) el.parentNode.replaceChild(clone, el);
-                });
-
-            } else {
-                document.getElementById('saveVisualBtn').style.display = "none";
-                refreshPreview();
-            }
-        }
-
-        async function saveVisualChanges() {
-            const doc = document.getElementById('previewFrame').contentDocument;
-            
-            // Restore from Vault
-            const clones = Array.from(doc.querySelectorAll('[data-vault-id]'));
-            clones.forEach(clone => {
-                const id = clone.getAttribute('data-vault-id');
-                if (elementVault.has(id)) {
-                    const original = elementVault.get(id);
-                    original.innerHTML = clone.innerHTML; 
-                    if(clone.parentNode) clone.parentNode.replaceChild(original, clone);
-                } else {
-                    clone.remove();
-                }
-            });
-
-            doc.body.contentEditable = "false";
-            doc.designMode = "off";
-
-            const fullHTML = "<!DOCTYPE html>\n<html>" + doc.documentElement.innerHTML + "</html>";
-            await fetch('/save_code', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({code: fullHTML, filename:currentFilename}) });
-            
-            document.getElementById('visualToggle').checked = false;
-            document.getElementById('saveVisualBtn').style.display = "none";
-            elementVault.clear();
-            refreshPreview();
-        }
-
-        // --- UTILS ---
+        // --- VISUAL EDIT & UTILS ---
         function switchTab(t) {
             document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
             document.querySelectorAll('.content-area').forEach(x => x.classList.remove('active'));
-            if(t==='ai') { 
-                document.querySelector('.tab:nth-child(1)').classList.add('active'); 
-                document.getElementById('ai-panel').classList.add('active'); 
-            } else if(t==='design') {
-                document.querySelector('.tab:nth-child(2)').classList.add('active'); 
-                document.getElementById('design-panel').classList.add('active');
-                refreshColorsFromCode();
-            } else { 
-                document.querySelector('.tab:nth-child(3)').classList.add('active'); 
-                document.getElementById('code-panel').classList.add('active'); 
-                loadCodeIntoEditor(); 
-            }
+            if(t==='ai') { document.querySelector('.tab:nth-child(1)').classList.add('active'); document.getElementById('ai-panel').classList.add('active'); }
+            else if(t==='design') { document.querySelector('.tab:nth-child(2)').classList.add('active'); document.getElementById('design-panel').classList.add('active'); refreshColorsFromCode(); }
+            else if(t==='history') { document.querySelector('.tab:nth-child(3)').classList.add('active'); document.getElementById('history-panel').classList.add('active'); loadHistory(); }
+            else { document.querySelector('.tab:nth-child(4)').classList.add('active'); document.getElementById('code-panel').classList.add('active'); loadCodeIntoEditor(); }
         }
 
         async function loadCodeIntoEditor() {
@@ -352,12 +257,43 @@
             refreshPreview();
         }
 
+        function toggleVisualEdit() {
+            const isOn = document.getElementById('visualToggle').checked;
+            const doc = document.getElementById('previewFrame').contentDocument;
+            const win = document.getElementById('previewFrame').contentWindow;
+            if (isOn) {
+                doc.querySelectorAll('[style*="display: none"]').forEach(el => { if(el.tagName === 'BUTTON'||el.tagName==='A') el.remove(); });
+                doc.body.contentEditable = "true"; doc.designMode = "on";
+                document.getElementById('saveVisualBtn').style.display = "block";
+                elementVault.clear();
+                Array.from(doc.querySelectorAll('a, button, [onclick], input[type="button"]')).forEach((el, index) => {
+                    const style = win.getComputedStyle(el);
+                    const clone = doc.createElement('span');
+                    clone.innerHTML = el.innerHTML; clone.className = el.className;
+                    clone.style.cssText = `background:${style.backgroundColor}; border:${style.border}; padding:${style.padding}; color:${style.color}; display:${style.display}; cursor:text; outline:2px dashed #ec4899;`;
+                    const id = "v_" + index; clone.setAttribute('data-vid', id); elementVault.set(id, el);
+                    if(el.parentNode) el.parentNode.replaceChild(clone, el);
+                });
+            } else { document.getElementById('saveVisualBtn').style.display = "none"; refreshPreview(); }
+        }
+
+        async function saveVisualChanges() {
+            const doc = document.getElementById('previewFrame').contentDocument;
+            doc.querySelectorAll('[data-vid]').forEach(c => {
+                const orig = elementVault.get(c.getAttribute('data-vid'));
+                if(orig) { orig.innerHTML = c.innerHTML; c.replaceWith(orig); } else c.remove();
+            });
+            doc.body.contentEditable = "false"; doc.designMode = "off";
+            const html = "<!DOCTYPE html>\n<html>" + doc.documentElement.innerHTML + "</html>";
+            await fetch('/save_code', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({code:html, filename:currentFilename}) });
+            document.getElementById('visualToggle').checked = false; document.getElementById('saveVisualBtn').style.display = "none"; refreshPreview();
+        }
+
         document.getElementById('fileInput').addEventListener('change', async function() {
             const fd = new FormData(); fd.append('file', this.files[0]);
             const res = await fetch('/upload_asset', { method:'POST', body:fd });
             const d = await res.json();
-            if(d.success) document.getElementById('uploadResult').innerText = "Snippet copied: " + d.snippet;
-            navigator.clipboard.writeText(d.snippet);
+            if(d.success) document.getElementById('uploadResult').innerText = "Snippet: " + d.snippet;
         });
 
         function downloadCurrent() { window.location.href = "/download/" + currentFilename; }
