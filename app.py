@@ -1,7 +1,13 @@
 import os
+import json
 import uuid
-import datetime
 import shutil
+import datetime
+import re
+import subprocess
+import time
+import sys
+import signal
 from flask import Flask, render_template, request, jsonify, send_file
 from werkzeug.utils import secure_filename
 from google import genai
@@ -15,214 +21,264 @@ app = Flask(__name__)
 # --- CONFIG ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECTS_DIR = os.path.join(BASE_DIR, "projects")
-BACKUP_DIR = os.path.join(BASE_DIR, "backups") # New Backup Folder
+BACKUP_DIR = os.path.join(BASE_DIR, "backups")
 UPLOAD_FOLDER = os.path.join(BASE_DIR, "static", "uploads")
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'svg', 'mp4', 'mov', 'webm'}
+USER_APP_PORT = 5005
 
-# Ensure directories exist
 os.makedirs(PROJECTS_DIR, exist_ok=True)
 os.makedirs(BACKUP_DIR, exist_ok=True)
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-# API KEY SETUP
+# API KEY
 GENAI_API_KEY = os.getenv("GEMINI_API_KEY")
 client = genai.Client(api_key=GENAI_API_KEY)
 
+# --- AUTO-PATCHER (Safe) ---
+def patch_existing_projects():
+    for project in os.listdir(PROJECTS_DIR):
+        app_path = os.path.join(PROJECTS_DIR, project, "app.py")
+        if os.path.exists(app_path):
+            with open(app_path, "r", encoding="utf-8") as f: content = f.read()
+            modified = False
+            if "import os" not in content:
+                content = "import os\n" + content; modified = True
+            if "os.environ.get('PORT'" not in content:
+                new_content = re.sub(r"if __name__ == ['\"]__main__['\"]:\s*app\.run\(.*?\)", f"if __name__ == '__main__':\n    port = int(os.environ.get('PORT', {USER_APP_PORT}))\n    app.run(debug=True, host='0.0.0.0', port=port)", content, flags=re.DOTALL)
+                if new_content == content: new_content += f"\n\nif __name__ == '__main__':\n    port = int(os.environ.get('PORT', {USER_APP_PORT}))\n    app.run(debug=True, host='0.0.0.0', port=port)"
+                content = new_content; modified = True
+            if modified:
+                with open(app_path, "w", encoding="utf-8") as f: f.write(content)
+patch_existing_projects()
+
 # --- HELPER FUNCTIONS ---
-def get_project_path(filename):
-    safe_name = secure_filename(filename)
-    if not safe_name.endswith('.html'): safe_name += '.html'
-    return os.path.join(PROJECTS_DIR, safe_name)
+def get_project_dir(name):
+    path = os.path.join(PROJECTS_DIR, secure_filename(name))
+    if not os.path.exists(path): os.makedirs(os.path.join(path, "templates"), exist_ok=True)
+    return path
 
-def create_backup(filename, label="AutoSave"):
-    """Saves a copy of the current file to backups/projectname/timestamp_label.html"""
-    source = get_project_path(filename)
-    if not os.path.exists(source): return
-
-    # Create folder for this specific project's backups
-    project_backup_dir = os.path.join(BACKUP_DIR, filename.replace('.html', ''))
-    os.makedirs(project_backup_dir, exist_ok=True)
-
-    # Timestamp
+def create_backup(project_name, label="AutoSave"):
+    src = get_project_dir(project_name)
+    if not os.path.exists(src): return
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    safe_label = secure_filename(label.replace(" ", "_"))
-    
-    # Backup Filename: 20240109_123000_AI_Update.html
-    backup_name = f"{timestamp}__{safe_label}.html"
-    destination = os.path.join(project_backup_dir, backup_name)
-    
-    shutil.copy2(source, destination)
+    backup_folder = os.path.join(BACKUP_DIR, secure_filename(project_name))
+    os.makedirs(backup_folder, exist_ok=True)
+    zip_name = f"{timestamp}__{secure_filename(label)}" 
+    shutil.make_archive(os.path.join(backup_folder, zip_name), 'zip', src)
+
+def clean_ai_json(text):
+    text = text.strip()
+    text = re.sub(r"^```\w*\n", "", text)
+    text = re.sub(r"\n```$", "", text)
+    return text.strip()
 
 # --- ROUTES ---
 
 @app.route('/')
 def index(): return render_template('builder.html')
 
-# 1. LIST PROJECTS
 @app.route('/projects')
 def list_projects():
-    files = [f for f in os.listdir(PROJECTS_DIR) if f.endswith('.html')]
-    return jsonify({"projects": files})
+    projects = [d for d in os.listdir(PROJECTS_DIR) if os.path.isdir(os.path.join(PROJECTS_DIR, d))]
+    return jsonify({"projects": sorted(projects)})
 
-# 2. CREATE NEW PROJECT
 @app.route('/create_project', methods=['POST'])
 def create_project():
     name = request.json.get('name')
     if not name: return jsonify({"success": False})
-    
-    filepath = get_project_path(name)
-    if os.path.exists(filepath): return jsonify({"success": False, "error": "Project exists"})
-    
-    starter_html = f"""<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-        :root {{ --primary: #6366f1; --bg: #f8fafc; --text: #334155; }}
-        body {{ background: var(--bg); color: var(--text); font-family: sans-serif; padding: 40px; }}
-        h1 {{ color: var(--primary); }}
-    </style>
-</head>
-<body>
-    <h1>{name}</h1>
-    <p>Start building...</p>
-</body>
-</html>"""
-    
-    with open(filepath, "w", encoding="utf-8") as f: f.write(starter_html)
-    return jsonify({"success": True, "filename": os.path.basename(filepath)})
+    path = get_project_dir(name)
+    if os.path.exists(os.path.join(path, "templates", "index.html")): return jsonify({"success": True, "name": name})
+    app_code = f"""import os
+from flask import Flask, render_template, request
 
-# 3. HISTORY & RESTORE (NEW)
-@app.route('/history/<filename>')
-def get_history(filename):
-    project_backup_dir = os.path.join(BACKUP_DIR, filename.replace('.html', ''))
-    if not os.path.exists(project_backup_dir):
-        return jsonify({"history": []})
-    
-    # Get list of files, sorted by time (newest first)
-    backups = []
-    for f in sorted(os.listdir(project_backup_dir), reverse=True):
-        if f.endswith('.html'):
-            # Parse filename: YYYYMMDD_HHMMSS__Label.html
-            parts = f.split('__')
-            if len(parts) >= 2:
-                ts_str = parts[0] # YYYYMMDD_HHMMSS
-                label = parts[1].replace('.html', '').replace('_', ' ')
-                
-                # Format time nicely
-                try:
-                    dt = datetime.datetime.strptime(ts_str, "%Y%m%d_%H%M%S")
-                    nice_time = dt.strftime("%I:%M:%S %p") # 10:30:05 PM
-                except:
-                    nice_time = ts_str
+app = Flask(__name__)
 
-                backups.append({"file": f, "time": nice_time, "label": label})
-    
-    return jsonify({"history": backups})
+@app.route('/')
+def home():
+    return render_template('index.html')
 
-@app.route('/restore', methods=['POST'])
-def restore_version():
-    data = request.json
-    filename = data.get('filename')
-    backup_file = data.get('backup_file')
-    
-    project_path = get_project_path(filename)
-    backup_path = os.path.join(BACKUP_DIR, filename.replace('.html', ''), backup_file)
-    
-    if os.path.exists(backup_path):
-        # Create a backup of the current state before restoring (Safety Net)
-        create_backup(filename, "Pre_Restore_Safety_Save")
-        
-        # Overwrite
-        shutil.copy2(backup_path, project_path)
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', {USER_APP_PORT}))
+    app.run(debug=True, host='0.0.0.0', port=port)
+"""
+    with open(os.path.join(path, "app.py"), "w") as f: f.write(app_code)
+    with open(os.path.join(path, "templates", "index.html"), "w") as f:
+        f.write(f"<!DOCTYPE html><html><head><style>:root{{--primary:#6366f1;--bg:#ffffff;}}body{{background:var(--bg);font-family:sans-serif;}}</style></head><body><h1>{name}</h1><p>Ready.</p></body></html>")
+    return jsonify({"success": True, "name": name})
+
+@app.route('/delete_project', methods=['POST'])
+def delete_project():
+    name = request.json.get('name')
+    path = get_project_dir(name)
+    if os.path.exists(path):
+        create_backup(name, "Pre_Delete")
+        shutil.rmtree(path)
         return jsonify({"success": True})
-    
-    return jsonify({"success": False, "error": "Backup not found"})
+    return jsonify({"success": False})
 
-
-# 4. PREVIEW & CODE
-@app.route('/preview/<filename>')
-def preview(filename):
-    filepath = get_project_path(filename)
-    if not os.path.exists(filepath): return "Project not found", 404
-    return send_file(filepath)
-
-@app.route('/get_code/<filename>')
-def get_code(filename):
-    filepath = get_project_path(filename)
-    if os.path.exists(filepath):
-        with open(filepath, "r", encoding="utf-8") as f: return jsonify({"code": f.read()})
+@app.route('/get_file', methods=['POST'])
+def get_file():
+    data = request.json
+    base = get_project_dir(data.get('project'))
+    path = os.path.join(base, 'templates', 'index.html') if data.get('filename') == 'index.html' else os.path.join(base, 'app.py')
+    if os.path.exists(path):
+        with open(path, "r", encoding="utf-8") as f: return jsonify({"code": f.read()})
     return jsonify({"code": ""})
 
-@app.route('/save_code', methods=['POST'])
-def save_code():
+@app.route('/save_file', methods=['POST'])
+def save_file():
     data = request.json
-    filename = data.get('filename')
-    code = data.get('code')
-    
-    # BACKUP BEFORE SAVE
-    create_backup(filename, "Manual_Edit")
-    
-    with open(get_project_path(filename), "w", encoding="utf-8") as f: f.write(code)
+    base = get_project_dir(data.get('project'))
+    path = os.path.join(base, 'templates', 'index.html') if data.get('filename') == 'index.html' else os.path.join(base, 'app.py')
+    create_backup(data.get('project'), f"Manual_Save_{data.get('filename')}")
+    with open(path, "w", encoding="utf-8") as f: f.write(data.get('code'))
     return jsonify({"success": True})
 
-# 5. ASSET UPLOAD
+# --- LIVE SERVER ---
+global current_user_process
+current_user_process = None
+
+@app.route('/run_app/<project>')
+def run_app(project):
+    global current_user_process
+    if current_user_process:
+        try: os.kill(current_user_process.pid, signal.SIGTERM); current_user_process.wait()
+        except: pass
+        current_user_process = None
+    project_path = get_project_dir(project)
+    if not os.path.exists(os.path.join(project_path, "app.py")): return jsonify({"success": False, "error": "app.py missing"})
+    try:
+        env = os.environ.copy(); env['PORT'] = str(USER_APP_PORT)
+        for k in ['WERKZEUG_SERVER_FD', 'WERKZEUG_RUN_MAIN']: 
+            if k in env: del env[k]
+        current_user_process = subprocess.Popen([sys.executable, "app.py"], cwd=project_path, env=env)
+        time.sleep(2) 
+        return jsonify({"success": True, "url": f"http://127.0.0.1:{USER_APP_PORT}"})
+    except Exception as e: return jsonify({"success": False, "error": str(e)})
+
+@app.route('/stop_app')
+def stop_app():
+    global current_user_process
+    if current_user_process:
+        try: os.kill(current_user_process.pid, signal.SIGTERM); current_user_process = None
+        except: pass
+    return jsonify({"success": True})
+
+# --- HISTORY & AI ---
+@app.route('/history/<project>')
+def get_history(project):
+    backup_folder = os.path.join(BACKUP_DIR, secure_filename(project))
+    if not os.path.exists(backup_folder): return jsonify({"history": []})
+    backups = []
+    for f in sorted(os.listdir(backup_folder), reverse=True):
+        if f.endswith('.zip'):
+            parts = f.split('__')
+            if len(parts) >= 2:
+                backups.append({"file": f, "label": parts[1].replace('.zip', '').replace('_', ' ')})
+    return jsonify({"history": backups})
+
+@app.route('/restore_project', methods=['POST'])
+def restore_project():
+    data = request.json
+    project = data.get('project')
+    project_path = get_project_dir(project)
+    backup_path = os.path.join(BACKUP_DIR, secure_filename(project), data.get('backup_file'))
+    if os.path.exists(backup_path):
+        create_backup(project, "Pre_Restore_Safety")
+        shutil.rmtree(project_path)
+        os.makedirs(project_path)
+        shutil.unpack_archive(backup_path, project_path)
+        return jsonify({"success": True})
+    return jsonify({"success": False})
+
+@app.route('/preview/<project>')
+def preview(project):
+    path = os.path.join(get_project_dir(project), 'templates', 'index.html')
+    if os.path.exists(path): return send_file(path)
+    return "No index.html found", 404
+
+# --- GENERATE WITH SAFETY GUARD ---
+@app.route('/generate', methods=['POST'])
+def generate():
+    data = request.json
+    project = data.get('project')
+    prompt = data.get('prompt')
+    
+    base = get_project_dir(project)
+    app_path = os.path.join(base, 'app.py')
+    html_path = os.path.join(base, 'templates', 'index.html')
+    
+    curr_app = ""
+    curr_html = ""
+    if os.path.exists(app_path): 
+        with open(app_path, "r", encoding="utf-8") as f: curr_app = f.read()
+    if os.path.exists(html_path): 
+        with open(html_path, "r", encoding="utf-8") as f: curr_html = f.read()
+    
+    create_backup(project, "AI_Update")
+
+    sys_instr = f"""
+    You are an expert Full Stack Python Developer.
+    User Request: "{prompt}"
+    
+    Current app.py:
+    {curr_app}
+    
+    Current index.html:
+    {curr_html}
+    
+    CRITICAL RULES:
+    1. Return VALID JSON with keys: "app_code", "html_code".
+    2. YOU MUST RETURN THE FULL CODE FOR BOTH FILES. DO NOT TRUNCATE. DO NOT RETURN EMPTY STRINGS.
+    3. If you make no changes to a file, return the Original Code exactly as is.
+    4. Ensure imports (import os) are present in app.py.
+    5. Main block: port = int(os.environ.get('PORT', {USER_APP_PORT}))
+    """
+    
+    tools = [types.Tool(google_search=types.GoogleSearch())] if data.get('use_news') else []
+    
+    try:
+        response = client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=sys_instr,
+            config=types.GenerateContentConfig(tools=tools, response_mime_type="application/json")
+        )
+        result = json.loads(clean_ai_json(response.text))
+        
+        # --- SAFETY GUARD: Prevent Empty Overwrites ---
+        new_app = result.get('app_code', '').strip()
+        new_html = result.get('html_code', '').strip()
+
+        if len(new_app) > 50: # Only save if it looks like real code
+            with open(app_path, "w", encoding="utf-8") as f: f.write(new_app)
+        else:
+            print("⚠️ Safety Guard: AI returned empty app.py. Skipping save.")
+
+        if len(new_html) > 10: # Only save if it looks like valid HTML
+            with open(html_path, "w", encoding="utf-8") as f: f.write(new_html)
+        else:
+            print("⚠️ Safety Guard: AI returned empty index.html. Skipping save.")
+
+        return jsonify({"success": True})
+    except Exception as e: return jsonify({"success": False, "error": str(e)})
+
+@app.route('/download_zip/<project>')
+def download_zip(project):
+    src = get_project_dir(project)
+    zip_path = shutil.make_archive(os.path.join(BACKUP_DIR, f"{project}_download"), 'zip', src)
+    return send_file(zip_path, as_attachment=True, download_name=f"{project}_fullstack.zip")
+
 @app.route('/upload_asset', methods=['POST'])
 def upload_asset():
     if 'file' not in request.files: return jsonify({"success": False})
     file = request.files['file']
-    filename = secure_filename(file.filename)
-    unique = f"{uuid.uuid4().hex[:6]}_{filename}"
+    unique = f"{uuid.uuid4().hex[:6]}_{secure_filename(file.filename)}"
     file.save(os.path.join(app.config['UPLOAD_FOLDER'], unique))
     path = f"/static/uploads/{unique}"
-    snippet = f'<img src="{path}" style="max-width:100%">'
-    if filename.endswith(('mp4','mov')): snippet = f'<video controls src="{path}"></video>'
-    return jsonify({"success": True, "snippet": snippet})
-
-@app.route('/download/<filename>')
-def download(filename):
-    return send_file(get_project_path(filename), as_attachment=True)
-
-# 6. AI GENERATION
-@app.route('/generate', methods=['POST'])
-def generate():
-    data = request.json
-    filename = data.get('filename')
-    prompt = data.get('prompt')
-    use_news = data.get('use_news', False)
-    
-    # BACKUP BEFORE AI GENERATION
-    # Truncate prompt for label
-    short_prompt = (prompt[:15] + '..') if len(prompt) > 15 else prompt
-    create_backup(filename, f"AI_{short_prompt}")
-    
-    filepath = get_project_path(filename)
-    current_code = ""
-    if os.path.exists(filepath):
-        with open(filepath, "r", encoding="utf-8") as f: current_code = f.read()
-
-    sys_instr = f"""
-    You are an AI Web Developer. 
-    User Request: "{prompt}"
-    Current Code: {current_code}
-    RULES: Output FULL HTML only. No Markdown. Keep CSS Variables.
-    """
-    tools = [types.Tool(google_search=types.GoogleSearch())] if use_news else []
-
-    try:
-        response = client.models.generate_content(
-            model='gemini-2.5-flash', 
-            contents=sys_instr,
-            config=types.GenerateContentConfig(tools=tools)
-        )
-        clean_code = response.text.replace("```html", "").replace("```", "").strip()
-        with open(filepath, "w", encoding="utf-8") as f: f.write(clean_code)
-        return jsonify({"success": True})
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)})
+    tag = f'<img src="{path}" style="max-width:100%">' 
+    if unique.endswith(('mp4','mov')): tag = f'<video controls src="{path}"></video>'
+    return jsonify({"success": True, "snippet": tag})
 
 if __name__ == '__main__':
-    print("--- AI Builder + Time Machine Running on http://127.0.0.1:5002 ---")
+    print("--- Full Stack AI Builder running on http://127.0.0.1:5002 ---")
     app.run(debug=True, port=5002)
