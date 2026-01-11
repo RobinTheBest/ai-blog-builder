@@ -34,7 +34,7 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 GENAI_API_KEY = os.getenv("GEMINI_API_KEY")
 client = genai.Client(api_key=GENAI_API_KEY)
 
-# --- AUTO-PATCHER (Safe) ---
+# --- AUTO-PATCHER ---
 def patch_existing_projects():
     for project in os.listdir(PROJECTS_DIR):
         app_path = os.path.join(PROJECTS_DIR, project, "app.py")
@@ -71,6 +71,31 @@ def clean_ai_json(text):
     text = re.sub(r"^```\w*\n", "", text)
     text = re.sub(r"\n```$", "", text)
     return text.strip()
+
+# --- CLEANUP LOGIC ---
+def cleanup_old_backups(project_name):
+    backup_folder = os.path.join(BACKUP_DIR, secure_filename(project_name))
+    if not os.path.exists(backup_folder): return
+    
+    now = datetime.datetime.now()
+    two_weeks_ago = now - datetime.timedelta(weeks=2)
+    
+    for f in os.listdir(backup_folder):
+        if not f.endswith('.zip'): continue
+        
+        # SKIP STARRED BACKUPS
+        if "_STARRED" in f: continue
+        
+        try:
+            # Parse timestamp from filename: YYYYMMDD_HHMMSS
+            ts_str = f.split('__')[0]
+            file_time = datetime.datetime.strptime(ts_str, "%Y%m%d_%H%M%S")
+            
+            if file_time < two_weeks_ago:
+                os.remove(os.path.join(backup_folder, f))
+                print(f"🧹 Cleaned up old backup: {f}")
+        except:
+            pass # Ignore files with weird names
 
 # --- ROUTES ---
 
@@ -141,16 +166,24 @@ current_user_process = None
 @app.route('/run_app/<project>')
 def run_app(project):
     global current_user_process
+    
+    # Kill ANY running process first to prevent "Zombie Apps"
     if current_user_process:
         try: os.kill(current_user_process.pid, signal.SIGTERM); current_user_process.wait()
         except: pass
         current_user_process = None
-    project_path = get_project_dir(project)
-    if not os.path.exists(os.path.join(project_path, "app.py")): return jsonify({"success": False, "error": "app.py missing"})
+
+    project_path = get_project_dir(project) # Explicitly get the dir for THIS project
+    
+    if not os.path.exists(os.path.join(project_path, "app.py")): 
+        return jsonify({"success": False, "error": "app.py missing"})
+
     try:
         env = os.environ.copy(); env['PORT'] = str(USER_APP_PORT)
         for k in ['WERKZEUG_SERVER_FD', 'WERKZEUG_RUN_MAIN']: 
             if k in env: del env[k]
+            
+        # Run python IN the specific project folder
         current_user_process = subprocess.Popen([sys.executable, "app.py"], cwd=project_path, env=env)
         time.sleep(2) 
         return jsonify({"success": True, "url": f"http://127.0.0.1:{USER_APP_PORT}"})
@@ -164,9 +197,11 @@ def stop_app():
         except: pass
     return jsonify({"success": True})
 
-# --- HISTORY & AI ---
+# --- HISTORY & STARRED ---
 @app.route('/history/<project>')
 def get_history(project):
+    cleanup_old_backups(project) # Auto-cleanup when history is loaded
+    
     backup_folder = os.path.join(BACKUP_DIR, secure_filename(project))
     if not os.path.exists(backup_folder): return jsonify({"history": []})
     backups = []
@@ -174,8 +209,28 @@ def get_history(project):
         if f.endswith('.zip'):
             parts = f.split('__')
             if len(parts) >= 2:
-                backups.append({"file": f, "label": parts[1].replace('.zip', '').replace('_', ' ')})
+                is_starred = "_STARRED" in f
+                label = parts[1].replace('.zip', '').replace('_', ' ').replace(' STARRED', '')
+                backups.append({"file": f, "label": label, "starred": is_starred})
     return jsonify({"history": backups})
+
+@app.route('/toggle_star', methods=['POST'])
+def toggle_star():
+    data = request.json
+    project = data.get('project')
+    filename = data.get('file')
+    folder = os.path.join(BACKUP_DIR, secure_filename(project))
+    old_path = os.path.join(folder, filename)
+    
+    if os.path.exists(old_path):
+        if "_STARRED" in filename:
+            new_name = filename.replace("_STARRED", "")
+        else:
+            new_name = filename.replace(".zip", "_STARRED.zip")
+            
+        os.rename(old_path, os.path.join(folder, new_name))
+        return jsonify({"success": True})
+    return jsonify({"success": False})
 
 @app.route('/restore_project', methods=['POST'])
 def restore_project():
@@ -197,7 +252,6 @@ def preview(project):
     if os.path.exists(path): return send_file(path)
     return "No index.html found", 404
 
-# --- GENERATE WITH SAFETY GUARD ---
 @app.route('/generate', methods=['POST'])
 def generate():
     data = request.json
@@ -229,10 +283,9 @@ def generate():
     
     CRITICAL RULES:
     1. Return VALID JSON with keys: "app_code", "html_code".
-    2. YOU MUST RETURN THE FULL CODE FOR BOTH FILES. DO NOT TRUNCATE. DO NOT RETURN EMPTY STRINGS.
-    3. If you make no changes to a file, return the Original Code exactly as is.
-    4. Ensure imports (import os) are present in app.py.
-    5. Main block: port = int(os.environ.get('PORT', {USER_APP_PORT}))
+    2. YOU MUST RETURN THE FULL CODE FOR BOTH FILES.
+    3. Ensure imports (import os) are present in app.py.
+    4. Main block: port = int(os.environ.get('PORT', {USER_APP_PORT}))
     """
     
     tools = [types.Tool(google_search=types.GoogleSearch())] if data.get('use_news') else []
@@ -245,19 +298,13 @@ def generate():
         )
         result = json.loads(clean_ai_json(response.text))
         
-        # --- SAFETY GUARD: Prevent Empty Overwrites ---
         new_app = result.get('app_code', '').strip()
         new_html = result.get('html_code', '').strip()
 
-        if len(new_app) > 50: # Only save if it looks like real code
+        if len(new_app) > 50: 
             with open(app_path, "w", encoding="utf-8") as f: f.write(new_app)
-        else:
-            print("⚠️ Safety Guard: AI returned empty app.py. Skipping save.")
-
-        if len(new_html) > 10: # Only save if it looks like valid HTML
+        if len(new_html) > 10: 
             with open(html_path, "w", encoding="utf-8") as f: f.write(new_html)
-        else:
-            print("⚠️ Safety Guard: AI returned empty index.html. Skipping save.")
 
         return jsonify({"success": True})
     except Exception as e: return jsonify({"success": False, "error": str(e)})
@@ -265,7 +312,8 @@ def generate():
 @app.route('/download_zip/<project>')
 def download_zip(project):
     src = get_project_dir(project)
-    zip_path = shutil.make_archive(os.path.join(BACKUP_DIR, f"{project}_download"), 'zip', src)
+    zip_path_base = os.path.join(BACKUP_DIR, f"{project}_download")
+    zip_path = shutil.make_archive(zip_path_base, 'zip', src)
     return send_file(zip_path, as_attachment=True, download_name=f"{project}_fullstack.zip")
 
 @app.route('/upload_asset', methods=['POST'])

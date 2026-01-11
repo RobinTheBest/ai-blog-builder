@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Full-Stack Builder Pro</title>
     <style>
-        :root { --primary: #6366f1; --bg: #f8fafc; --dark: #1e293b; --light: #f1f5f9; --danger: #ef4444; --success: #22c55e; }
+        :root { --primary: #6366f1; --bg: #f8fafc; --dark: #1e293b; --light: #f1f5f9; --danger: #ef4444; --success: #22c55e; --warn: #f59e0b; }
         body { margin: 0; display: flex; height: 100vh; font-family: sans-serif; background: var(--bg); overflow: hidden; }
         
         .project-sidebar { width: 240px; background: var(--dark); color: #94a3b8; display: flex; flex-direction: column; padding: 10px; border-right: 1px solid #334155; }
@@ -31,9 +31,11 @@
         button.action-btn { background: var(--primary); color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; font-weight: 600; width: 100%; }
         button.action-btn:disabled { background: #94a3b8; cursor: wait; }
 
-        /* DESIGN & HISTORY */
-        .color-row { display: flex; justify-content: space-between; padding: 8px; background: #f8fafc; border-radius: 6px; border: 1px solid #e2e8f0; }
+        /* HISTORY */
         .history-item { background: #f1f5f9; padding: 10px; border-radius: 6px; border: 1px solid #e2e8f0; font-size: 0.85rem; display: flex; flex-direction: column; gap: 5px; }
+        .history-header { display: flex; justify-content: space-between; align-items: center; }
+        .star-btn { cursor: pointer; font-size: 1.2rem; color: #cbd5e1; transition: 0.2s; border: none; background: none; }
+        .star-btn.active { color: var(--warn); }
         .history-time { font-weight: bold; color: #334155; }
         .restore-btn { align-self: flex-start; background: #cbd5e1; border: none; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; }
 
@@ -50,12 +52,6 @@
         
         .run-btn { background: var(--success); color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.8rem; display: flex; align-items: center; gap: 5px; }
         .stop-btn { background: var(--danger); color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.8rem; display: none; }
-        
-        .switch { position: relative; display: inline-block; width: 34px; height: 20px; }
-        .switch input { opacity: 0; width: 0; height: 0; }
-        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 20px; }
-        input:checked + .slider { background-color: var(--primary); }
-        input:checked + .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; border-radius: 50%; transform: translateX(14px); }
         
         iframe { flex: 1; border: none; }
     </style>
@@ -81,7 +77,7 @@
             <label style="display:flex; align-items:center; gap:8px; font-size:0.9rem; background:#eff6ff; padding:8px; border-radius:6px;">
                 <input type="checkbox" id="newsMode"> <span>🌍 News Mode</span>
             </label>
-            <textarea id="prompt" style="height:100px;" placeholder="e.g. Create a Flask form that asks for my name..."></textarea>
+            <textarea id="prompt" style="height:100px;" placeholder="e.g. Create a To-Do list..."></textarea>
             <button id="genBtn" class="action-btn" onclick="handleGenerate()">Run Full-Stack Update</button>
             <hr style="border:0; border-top:1px solid #eee; width:100%;">
             <h3>Assets</h3>
@@ -98,6 +94,7 @@
 
         <div id="history-panel" class="content-area">
             <h3>Time Machine</h3>
+            <p style="font-size:0.75rem; color:#64748b;">Unstarred items deleted after 14 days.</p>
             <button class="action-btn" style="padding:8px; background:#475569; margin-bottom:10px;" onclick="loadHistory()">↻ Refresh</button>
             <div id="historyList" style="display:flex; flex-direction:column; gap:10px;"></div>
         </div>
@@ -117,20 +114,10 @@
             <div style="display:flex; align-items:center; gap:10px;">
                 <span id="statusDot" class="status-dot"></span>
                 <strong id="previewModeLabel">Static Preview</strong>
-                
                 <button id="runBtn" class="run-btn" onclick="runLiveApp()">▶ Run Live App</button>
                 <button id="stopBtn" class="stop-btn" onclick="stopLiveApp()">■ Stop Server</button>
             </div>
-            
-            <div style="display:flex; align-items:center; gap:10px;">
-                <button onclick="reloadPreview()" style="background:none; border:1px solid #ccc; padding:5px; border-radius:4px; cursor:pointer;">↻ Reload</button>
-                
-                <span style="border-left:1px solid #ddd; height:20px; margin:0 5px;"></span>
-                
-                <span style="font-size:0.8rem;">Visual Edit</span>
-                <label class="switch"><input type="checkbox" id="visualToggle" onchange="toggleVisualEdit()"><span class="slider"></span></label>
-                <button id="saveVisualBtn" onclick="saveVisualChanges()" style="display:none; background:#22c55e; color:white; border:none; padding:5px 12px; border-radius:4px; cursor:pointer;">Save</button>
-            </div>
+            <button onclick="reloadPreview()" style="background:none; border:1px solid #ccc; padding:5px; border-radius:4px; cursor:pointer;">↻ Reload</button>
         </div>
         <iframe id="previewFrame"></iframe>
     </div>
@@ -139,7 +126,6 @@
         let currentProject = "";
         let currentFile = "index.html";
         let isRunning = false;
-        let elementVault = new Map();
 
         window.onload = loadProjects;
 
@@ -186,40 +172,33 @@
         }
 
         function selectProject(name) {
-            stopLiveApp(); // Stop previous server if any
+            stopLiveApp();
             currentProject = name;
             document.getElementById('currentLabel').innerText = "Editing: " + name;
             document.querySelectorAll('.project-row').forEach(r => {
                 r.classList.remove('active');
                 if(r.innerText === name) r.classList.add('active');
             });
-            
-            // Set Static Mode
             setPreviewStatic();
             loadCodeIntoEditor();
             setTimeout(loadHistory, 500);
             setTimeout(refreshColorsFromCode, 500);
         }
 
-        // --- LIVE SERVER LOGIC ---
         async function runLiveApp() {
             if(!currentProject) return;
             document.getElementById('runBtn').innerText = "Starting...";
-            
             const res = await fetch('/run_app/' + currentProject);
             const data = await res.json();
-            
             if(data.success) {
                 isRunning = true;
-                document.getElementById('previewModeLabel').innerText = "Live Python App (Port 5003)";
+                document.getElementById('previewModeLabel').innerText = "Live App (Port 5005)";
                 document.getElementById('statusDot').classList.add('live');
                 document.getElementById('runBtn').style.display = 'none';
                 document.getElementById('stopBtn').style.display = 'inline-flex';
-                
-                // Point iframe to localhost:5003
                 document.getElementById('previewFrame').src = data.url;
             } else {
-                alert("Failed to start app: " + data.error);
+                alert("Failed: " + data.error);
                 document.getElementById('runBtn').innerText = "▶ Run Live App";
             }
         }
@@ -232,7 +211,7 @@
         }
 
         function setPreviewStatic() {
-            document.getElementById('previewModeLabel').innerText = "Static Preview (HTML Only)";
+            document.getElementById('previewModeLabel').innerText = "Static Preview";
             document.getElementById('statusDot').classList.remove('live');
             document.getElementById('runBtn').style.display = 'inline-flex';
             document.getElementById('runBtn').innerText = "▶ Run Live App";
@@ -240,29 +219,24 @@
             document.getElementById('previewFrame').src = "/preview/" + currentProject;
         }
 
-        function reloadPreview() {
-            document.getElementById('previewFrame').src += '';
-        }
+        function reloadPreview() { document.getElementById('previewFrame').src += ''; }
 
         // --- AI ---
         async function handleGenerate() {
             if(!currentProject) return;
-            stopLiveApp(); // Stop to allow file overwrite safely
-            
+            stopLiveApp();
             const prompt = document.getElementById('prompt').value;
             const useNews = document.getElementById('newsMode').checked;
             const btn = document.getElementById('genBtn');
             btn.disabled = true; btn.innerText = "Building...";
-
             await fetch('/generate', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ prompt, project: currentProject, use_news: useNews }) });
-
             btn.disabled = false; btn.innerText = "Run Full-Stack Update";
-            setPreviewStatic(); // Show updated HTML
+            setPreviewStatic();
             loadCodeIntoEditor();
             loadHistory();
         }
 
-        // --- CODE EDITOR ---
+        // --- CODE ---
         function switchFile(filename) {
             currentFile = filename;
             document.getElementById('tab-html').classList.toggle('active', filename === 'index.html');
@@ -282,41 +256,7 @@
             loadHistory();
         }
 
-        // --- DESIGN TAB ---
-        async function refreshColorsFromCode() {
-            const res = await fetch('/get_file', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({project: currentProject, filename: 'index.html'}) });
-            const code = (await res.json()).code;
-            const list = document.getElementById('colorList');
-            list.innerHTML = "";
-            const rootMatch = code.match(/:root\s*{([^}]+)}/);
-            if(rootMatch) {
-                const colorRegex = /(--[\w-]+)\s*:\s*(#[0-9a-fA-F]{3,6})/g;
-                let match;
-                while ((match = colorRegex.exec(rootMatch[1])) !== null) {
-                    createColorPicker(match[1], match[2], list);
-                }
-            } else { list.innerHTML = "<small>No :root variables found.</small>"; }
-        }
-        function createColorPicker(varName, hexValue, container) {
-            const row = document.createElement('div');
-            row.className = 'color-row';
-            row.innerHTML = `<span style="font-family:monospace;font-size:0.8rem;">${varName}</span>`;
-            const input = document.createElement('input');
-            input.type = 'color'; input.value = hexValue; input.style.border="none"; input.style.background="none";
-            input.addEventListener('input', async (e) => await updateColorInCode(varName, e.target.value));
-            row.appendChild(input); container.appendChild(row);
-        }
-        async function updateColorInCode(varName, newColor) {
-            const res = await fetch('/get_file', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({project: currentProject, filename: 'index.html'}) });
-            let code = (await res.json()).code;
-            const regex = new RegExp(`(${varName}\\s*:\\s*)(#[0-9a-fA-F]{3,6})`, 'g');
-            code = code.replace(regex, `$1${newColor}`);
-            await fetch('/save_file', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({project: currentProject, filename: 'index.html', code: code}) });
-            // Only update iframe if static, otherwise reload needed
-            if(!isRunning) document.getElementById('previewFrame').contentDocument.documentElement.style.setProperty(varName, newColor);
-        }
-
-        // --- HISTORY TAB ---
+        // --- HISTORY & STARS ---
         async function loadHistory() {
             if(!currentProject) return;
             const res = await fetch('/history/' + currentProject);
@@ -326,51 +266,54 @@
             data.history.forEach(item => {
                 const div = document.createElement('div');
                 div.className = 'history-item';
-                div.innerHTML = `<div class="history-time">${item.label}</div><button class="restore-btn" onclick="restoreVersion('${item.file}')">↺ Restore</button>`;
+                div.innerHTML = `
+                    <div class="history-header">
+                        <button class="star-btn ${item.starred ? 'active' : ''}" onclick="toggleStar('${item.file}')">★</button>
+                        <span class="history-time">${item.label}</span>
+                    </div>
+                    <button class="restore-btn" onclick="restoreVersion('${item.file}')">↺ Restore</button>
+                `;
                 list.appendChild(div);
             });
         }
+        async function toggleStar(filename) {
+            await fetch('/toggle_star', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ project: currentProject, file: filename }) });
+            loadHistory();
+        }
         async function restoreVersion(backupFile) {
-            stopLiveApp(); // Must stop before restore
-            if(!confirm("Restore this version?")) return;
-            const res = await fetch('/restore_project', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ project: currentProject, backup_file: backupFile }) });
-            if((await res.json()).success) { alert("Restored!"); setPreviewStatic(); loadCodeIntoEditor(); loadHistory(); }
+            stopLiveApp();
+            if(!confirm("Restore?")) return;
+            await fetch('/restore_project', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ project: currentProject, backup_file: backupFile }) });
+            alert("Restored!"); setPreviewStatic(); loadCodeIntoEditor(); loadHistory();
         }
 
-        // --- VISUAL EDIT (Vault) ---
-        function toggleVisualEdit() {
-            if(isRunning) { alert("Please stop the Live App to use Visual Edit."); document.getElementById('visualToggle').checked=false; return; }
-            const isOn = document.getElementById('visualToggle').checked;
-            const doc = document.getElementById('previewFrame').contentDocument;
-            const win = document.getElementById('previewFrame').contentWindow;
-            if (isOn) {
-                doc.querySelectorAll('[style*="display: none"]').forEach(el => { if(el.tagName==='BUTTON'||el.tagName==='A') el.remove(); });
-                doc.body.contentEditable = "true"; doc.designMode = "on";
-                document.getElementById('saveVisualBtn').style.display = "block";
-                elementVault.clear();
-                Array.from(doc.querySelectorAll('a, button, [onclick], input[type="button"]')).forEach((el, index) => {
-                    const style = win.getComputedStyle(el);
-                    const clone = doc.createElement('span');
-                    clone.innerHTML = el.innerHTML; clone.className = el.className;
-                    clone.style.cssText = `background:${style.backgroundColor}; border:${style.border}; padding:${style.padding}; color:${style.color}; display:${style.display}; cursor:text; outline:2px dashed #ec4899;`;
-                    const id = "v_" + index; clone.setAttribute('data-vid', id); elementVault.set(id, el);
-                    if(el.parentNode) el.parentNode.replaceChild(clone, el);
-                });
-            } else { document.getElementById('saveVisualBtn').style.display = "none"; reloadPreview(); }
+        // --- DESIGN ---
+        async function refreshColorsFromCode() {
+            const res = await fetch('/get_file', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({project: currentProject, filename: 'index.html'}) });
+            const code = (await res.json()).code;
+            const list = document.getElementById('colorList');
+            list.innerHTML = "";
+            const rootMatch = code.match(/:root\s*{([^}]+)}/);
+            if(rootMatch) {
+                const colorRegex = /(--[\w-]+)\s*:\s*(#[0-9a-fA-F]{3,6})/g;
+                let match;
+                while ((match = colorRegex.exec(rootMatch[1])) !== null) createColorPicker(match[1], match[2], list);
+            }
         }
-        async function saveVisualChanges() {
-            const doc = document.getElementById('previewFrame').contentDocument;
-            doc.querySelectorAll('[data-vid]').forEach(c => {
-                const orig = elementVault.get(c.getAttribute('data-vid'));
-                if(orig) { orig.innerHTML = c.innerHTML; c.replaceWith(orig); } else c.remove();
+        function createColorPicker(varName, hexValue, container) {
+            const row = document.createElement('div'); row.className = 'color-row';
+            row.innerHTML = `<span style="font-family:monospace;font-size:0.8rem;">${varName}</span>`;
+            const input = document.createElement('input'); input.type = 'color'; input.value = hexValue; input.style.border="none"; input.style.background="none";
+            input.addEventListener('input', async (e) => {
+                const res = await fetch('/get_file', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({project: currentProject, filename: 'index.html'}) });
+                let code = (await res.json()).code;
+                code = code.replace(new RegExp(`(${varName}\\s*:\\s*)(#[0-9a-fA-F]{3,6})`, 'g'), `$1${e.target.value}`);
+                await fetch('/save_file', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({project: currentProject, filename: 'index.html', code: code}) });
+                if(!isRunning) document.getElementById('previewFrame').contentDocument.documentElement.style.setProperty(varName, e.target.value);
             });
-            doc.body.contentEditable = "false"; doc.designMode = "off";
-            const html = "<!DOCTYPE html>\n<html>" + doc.documentElement.innerHTML + "</html>";
-            await fetch('/save_file', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({project: currentProject, filename:'index.html', code:html}) });
-            document.getElementById('visualToggle').checked = false; document.getElementById('saveVisualBtn').style.display = "none"; reloadPreview();
+            row.appendChild(input); container.appendChild(row);
         }
 
-        // --- UTILS ---
         function switchTab(t) {
             document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
             document.querySelectorAll('.content-area').forEach(x => x.classList.remove('active'));
@@ -379,14 +322,11 @@
             else if(t==='history') { document.querySelector('.tab:nth-child(3)').classList.add('active'); document.getElementById('history-panel').classList.add('active'); loadHistory(); }
             else { document.querySelector('.tab:nth-child(4)').classList.add('active'); document.getElementById('code-panel').classList.add('active'); loadCodeIntoEditor(); }
         }
-
         document.getElementById('fileInput').addEventListener('change', async function() {
             const fd = new FormData(); fd.append('file', this.files[0]);
-            const res = await fetch('/upload_asset', { method:'POST', body:fd });
-            const d = await res.json();
+            const d = await (await fetch('/upload_asset', { method:'POST', body:fd })).json();
             if(d.success) { navigator.clipboard.writeText(d.snippet); alert("Asset snippet copied!"); }
         });
-
         function downloadZip() { window.location.href = "/download_zip/" + currentProject; }
     </script>
 </body>
