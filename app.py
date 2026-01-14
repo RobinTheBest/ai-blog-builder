@@ -288,41 +288,60 @@ def stop_app():
 
 # --- AZURE PROXY ROUTE ---
 # --- SMARTER AZURE PROXY (Fixes 404 on Redirects) ---
-@app.route('/live', defaults={'path': ''}, methods=['GET', 'POST', 'PUT', 'DELETE'])
+# --- DEBUGGING PROXY (Catches all URL variations) ---
+@app.route('/live', methods=['GET', 'POST', 'PUT', 'DELETE'])
+@app.route('/live/', methods=['GET', 'POST', 'PUT', 'DELETE'])
 @app.route('/live/<path:path>', methods=['GET', 'POST', 'PUT', 'DELETE'])
-def live_proxy(path):
+def live_proxy(path=""):
+    # 1. Check if process is actually running
     if not current_user_process:
-        return "App is not running. Click 'Run Live App' first."
-        
-    # Connect to the internal app on Port 5005
+        return "<h3>⚠️ Error: App is not running.</h3><p>Click 'Run Live App' again.</p>"
+    
+    # 2. Construct the internal URL
+    # If path is missing, default to empty string to hit root
     target_url = f"http://127.0.0.1:{USER_APP_PORT}/{path}"
     
+    print(f"🔄 Proxying: /live/{path}  -->  {target_url}") # DEBUG LOG
+
     try:
+        # 3. Forward the request
         resp = requests.request(
             method=request.method,
             url=target_url,
             headers={k:v for k,v in request.headers if k.lower() != 'host'},
             data=request.get_data(),
             cookies=request.cookies,
-            allow_redirects=False # We handle redirects manually below
+            allow_redirects=False
         )
         
+        # 4. Handle Headers & Redirects
         excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection', 'location']
-        headers = [(name, value) for (name, value) in resp.raw.headers.items()
-                   if name.lower() not in excluded_headers]
+        headers = [(name, value) for (name, value) in resp.raw.headers.items() if name.lower() not in excluded_headers]
         
-        # 🔧 CRITICAL FIX: Rewrite Redirects to stay inside the tunnel
         if 'Location' in resp.headers:
             loc = resp.headers['Location']
-            # If the app redirects to "/login", make it "/live/login"
-            if loc.startswith('/'):
-                headers.append(('Location', f'/live{loc}'))
-            else:
-                headers.append(('Location', loc))
+            if loc.startswith('/'): headers.append(('Location', f'/live{loc}'))
+            else: headers.append(('Location', loc))
 
-        return Response(resp.content, resp.status_code, headers)
+        # 5. CONTENT REWRITING (Fixes Broken Links/CSS)
+        content = resp.content
+        if 'text/html' in resp.headers.get('Content-Type', ''):
+            try:
+                text = content.decode('utf-8')
+                # Inject Base Tag so relative links work
+                if '<head>' in text:
+                    text = text.replace('<head>', '<head><base href="/live/">')
+                # Rewrite absolute paths
+                text = re.sub(r'(src|href|action)="/(?!live/)', r'\1="/live/', text)
+                content = text.encode('utf-8')
+            except: pass
+
+        return Response(content, resp.status_code, headers)
+
+    except requests.exceptions.ConnectionError:
+        return f"<h3>❌ Connection Refused</h3><p>The Builder tried to hit <b>{target_url}</b> but failed.</p><p><b>Possible Causes:</b><br>1. The User App crashed immediately (check code).<br>2. Azure is running multiple workers (Did you set the Startup Command?).</p>"
     except Exception as e:
-        return f"Proxy Error: The internal app is failing to respond. Error: {e}"
+        return f"<h3>🔥 Proxy Error</h3><p>{str(e)}</p>"
 # --- STATIC PREVIEW ROUTE ---
 @app.route('/preview/<project>')
 def preview_project(project):
