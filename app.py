@@ -23,6 +23,7 @@ env_path = os.path.join(BASE_DIR, '.env')
 load_dotenv(env_path)
 
 app = Flask(__name__)
+current_user_process = None  # <--- ADD THIS LINE
 
 # --- CONFIGURATION ---
 PROJECTS_DIR = os.path.join(BASE_DIR, "projects")
