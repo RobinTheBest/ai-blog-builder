@@ -257,35 +257,53 @@ def generate():
         return jsonify({"success": False, "error": str(e)})
 
 # --- RUN/STOP (WITH AZURE PROXY) ---
-global current_user_process
-current_user_process = None
-
+# --- SMART RUNNER (Detects Crashes) ---
 @app.route('/run_app/<project>')
 def run_app(project):
     global current_user_process
+    
+    # 1. Kill existing process
     if current_user_process:
-        try: os.kill(current_user_process.pid, signal.SIGTERM); current_user_process.wait()
+        try: 
+            os.kill(current_user_process.pid, signal.SIGTERM)
+            current_user_process.wait()
         except: pass
+    
     kill_process_on_port(USER_APP_PORT)
     path = get_project_dir(project)
-    if not os.path.exists(os.path.join(path, "app.py")): return jsonify({"success": False, "error": "app.py not found"})
+    
+    if not os.path.exists(os.path.join(path, "app.py")): 
+        return jsonify({"success": False, "error": "app.py not found"})
+    
     try:
-        env = os.environ.copy(); env['PORT'] = str(USER_APP_PORT)
-        current_user_process = subprocess.Popen([sys.executable, "app.py"], cwd=path, env=env)
-        time.sleep(2)
-        # RETURN RELATIVE URL FOR AZURE PROXY
+        env = os.environ.copy()
+        env['PORT'] = str(USER_APP_PORT)
+        # Remove Flask reload env vars so the sub-app doesn't get confused
+        for k in ['WERKZEUG_SERVER_FD', 'WERKZEUG_RUN_MAIN']:
+            if k in env: del env[k]
+
+        # 2. Start Process with Error Capturing
+        current_user_process = subprocess.Popen(
+            [sys.executable, "app.py"], 
+            cwd=path, 
+            env=env,
+            stderr=subprocess.PIPE, # Capture errors
+            text=True
+        )
+        
+        # 3. Wait 1 second to see if it crashes immediately
+        time.sleep(1.5)
+        
+        if current_user_process.poll() is not None:
+            # It died! Read the error message.
+            error_log = current_user_process.stderr.read()
+            print(f"❌ User App Crashed:\n{error_log}")
+            return jsonify({"success": False, "error": f"App Crashed on Startup:\n{error_log}"})
+            
         return jsonify({"success": True, "url": "/live/"})
-    except Exception as e: return jsonify({"success": False, "error": str(e)})
-
-@app.route('/stop_app')
-def stop_app():
-    global current_user_process
-    if current_user_process:
-        try: os.kill(current_user_process.pid, signal.SIGTERM)
-        except: pass
-    kill_process_on_port(USER_APP_PORT)
-    return jsonify({"success": True})
-
+        
+    except Exception as e: 
+        return jsonify({"success": False, "error": str(e)})
 # --- AZURE PROXY ROUTE ---
 # --- SMARTER AZURE PROXY (Fixes 404 on Redirects) ---
 # --- DEBUGGING PROXY (Catches all URL variations) ---
