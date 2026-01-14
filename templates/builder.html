@@ -5,72 +5,271 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Full-Stack Builder Pro</title>
     <style>
-        :root { --primary: #6366f1; --bg: #f8fafc; --dark: #1e293b; --light: #f1f5f9; --danger: #ef4444; --success: #22c55e; --warn: #f59e0b; }
-        body { margin: 0; display: flex; height: 100vh; font-family: sans-serif; background: var(--bg); overflow: hidden; }
-       
-        /* SIDEBARS */
-        .project-sidebar { width: 240px; min-width: 150px; background: var(--dark); color: #94a3b8; display: flex; flex-direction: column; padding: 10px; z-index: 50; position: relative; }
-        .tool-sidebar { width: 360px; min-width: 250px; background: #fff; display: flex; flex-direction: column; z-index: 50; position: relative; }
-        .preview-area { flex: 1; display: flex; flex-direction: column; background: #fff; min-width: 300px; }
+        /* --- GLOBAL VARIABLES & RESET --- */
+        :root { 
+            --primary: #6366f1; 
+            --bg: #f8fafc; 
+            --dark: #1e293b; 
+            --light: #f1f5f9; 
+            --danger: #ef4444; 
+            --success: #22c55e; 
+            --warn: #f59e0b; 
+        }
+        body { 
+            margin: 0; 
+            display: flex; 
+            height: 100vh; 
+            font-family: sans-serif; 
+            background: var(--bg); 
+            overflow: hidden; 
+        }
 
-        /* RESIZERS */
-        .resizer { width: 8px; background: #e2e8f0; cursor: col-resize; z-index: 100; transition: background 0.2s; flex-shrink: 0; }
-        .resizer:hover, .resizer.dragging { background: var(--primary); }
+        /* --- LAYOUT SIDEBARS --- */
+        .project-sidebar { 
+            width: 240px; 
+            min-width: 150px; 
+            background: var(--dark); 
+            color: #94a3b8; 
+            display: flex; 
+            flex-direction: column; 
+            padding: 10px; 
+            z-index: 50; 
+            position: relative; 
+        }
+        .tool-sidebar { 
+            width: 360px; 
+            min-width: 250px; 
+            background: #fff; 
+            display: flex; 
+            flex-direction: column; 
+            z-index: 50; 
+            position: relative; 
+        }
+        .preview-area { 
+            flex: 1; 
+            display: flex; 
+            flex-direction: column; 
+            background: #fff; 
+            min-width: 300px; 
+        }
 
-        /* BUTTONS */
+        /* --- DRAGGABLE RESIZERS --- */
+        .resizer { 
+            width: 8px; 
+            background: #e2e8f0; 
+            cursor: col-resize; 
+            z-index: 100; 
+            transition: background 0.2s; 
+            flex-shrink: 0; 
+        }
+        .resizer:hover, .resizer.dragging { 
+            background: var(--primary); 
+        }
+
+        /* --- PROJECT LIST ITEMS --- */
         .new-btn {
-            margin-top: 10px; padding: 10px; background: #334155; color: #fff; text-align: center;
-            border-radius: 6px; cursor: pointer; font-size: 0.8rem; border: 1px dashed #64748b;
-            z-index: 9999; position: relative; user-select: none;
+            margin-top: 10px; 
+            padding: 10px; 
+            background: #334155; 
+            color: #fff; 
+            text-align: center;
+            border-radius: 6px; 
+            cursor: pointer; 
+            font-size: 0.8rem; 
+            border: 1px dashed #64748b;
         }
         .new-btn:hover { border-color: #fff; background: #475569; }
-        .new-btn:active { transform: scale(0.98); background: var(--primary); }
 
         .project-row {
-            display: flex; align-items: center; justify-content: space-between;
-            margin-bottom: 4px; border-radius: 6px; padding: 0 5px; transition: 0.2s;
-            cursor: pointer; position: relative; z-index: 200;
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between;
+            margin-bottom: 4px; 
+            border-radius: 6px; 
+            padding: 0 5px; 
+            transition: 0.2s;
+            cursor: pointer; 
         }
         .project-row:hover { background: #334155; }
         .project-row.active { background: var(--primary); }
-        .project-name { padding: 10px; font-size: 0.9rem; color: #cbd5e1; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .project-row.active .project-name { color: white; font-weight: 600; }
-       
-        .delete-btn {
-            color: #64748b; padding: 8px; transition: 0.2s; z-index: 300; position: relative;
-            border-radius: 4px; font-size: 1.1rem; display: flex; align-items: center; justify-content: center;
-        }
-        .delete-btn:hover { color: var(--danger); background: rgba(239, 68, 68, 0.1); transform: scale(1.1); }
-
-        /* UI ELEMENTS */
-        .project-header { font-size: 0.8rem; font-weight: bold; color: #fff; margin-bottom: 15px; border-bottom: 1px solid #334155; padding-bottom: 10px; }
-        .tabs { display: flex; border-bottom: 1px solid #e2e8f0; background: var(--light); }
-        .tab { flex: 1; padding: 12px; border: none; cursor: pointer; font-weight: 600; color: #64748b; background: transparent; }
-        .tab.active { background: #fff; color: var(--primary); border-bottom: 2px solid var(--primary); }
-        .content-area { flex: 1; padding: 20px; display: none; flex-direction: column; gap: 15px; overflow-y: auto; }
-        .content-area.active { display: flex; }
-        textarea { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; resize: none; font-family: inherit; box-sizing: border-box; }
-        button.action-btn { background: var(--primary); color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; font-weight: 600; width: 100%; }
-        button.action-btn:disabled { background: #94a3b8; cursor: wait; }
-       
-        /* PREVIEW BAR */
-        .top-bar { padding: 10px 20px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; background: #fff; }
-        .status-dot { width: 10px; height: 10px; background: #ccc; border-radius: 50%; display: inline-block; margin-right: 5px; }
-        .status-dot.live { background: var(--success); box-shadow: 0 0 8px var(--success); }
-        .run-btn { background: var(--success); color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.8rem; display: flex; align-items: center; gap: 5px; }
-        .stop-btn { background: var(--danger); color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.8rem; display: none; }
         
-        /* EDIT TOGGLE BTN */
-        .edit-toggle { background: #f59e0b; border: none; color: white; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.8rem; margin-left: 10px; transition: background 0.3s; }
+        .project-name { 
+            padding: 10px; 
+            font-size: 0.9rem; 
+            color: #cbd5e1; 
+            flex: 1; 
+            overflow: hidden; 
+            text-overflow: ellipsis; 
+            white-space: nowrap; 
+        }
+        .project-row.active .project-name { color: white; font-weight: 600; }
+        
+        .delete-btn {
+            color: #64748b; 
+            padding: 8px; 
+            transition: 0.2s; 
+            border-radius: 4px; 
+            font-size: 1.1rem; 
+        }
+        .delete-btn:hover { color: var(--danger); background: rgba(239, 68, 68, 0.1); }
+
+        /* --- UI ELEMENTS (Tabs, Textareas, Buttons) --- */
+        .project-header { 
+            font-size: 0.8rem; 
+            font-weight: bold; 
+            color: #fff; 
+            margin-bottom: 15px; 
+            border-bottom: 1px solid #334155; 
+            padding-bottom: 10px; 
+        }
+        
+        .tabs { 
+            display: flex; 
+            border-bottom: 1px solid #e2e8f0; 
+            background: var(--light); 
+        }
+        .tab { 
+            flex: 1; 
+            padding: 12px; 
+            border: none; 
+            cursor: pointer; 
+            font-weight: 600; 
+            color: #64748b; 
+            background: transparent; 
+        }
+        .tab.active { 
+            background: #fff; 
+            color: var(--primary); 
+            border-bottom: 2px solid var(--primary); 
+        }
+
+        .content-area { 
+            flex: 1; 
+            padding: 20px; 
+            display: none; 
+            flex-direction: column; 
+            gap: 15px; 
+            overflow-y: auto; 
+        }
+        .content-area.active { display: flex; }
+
+        textarea { 
+            width: 100%; 
+            padding: 10px; 
+            border: 1px solid #cbd5e1; 
+            border-radius: 6px; 
+            resize: none; 
+            font-family: inherit; 
+            box-sizing: border-box; 
+        }
+
+        button.action-btn { 
+            background: var(--primary); 
+            color: white; 
+            border: none; 
+            padding: 12px; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            font-weight: 600; 
+            width: 100%; 
+        }
+        button.action-btn:disabled { background: #94a3b8; cursor: wait; }
+
+        /* --- TOP PREVIEW BAR --- */
+        .top-bar { 
+            padding: 10px 20px; 
+            border-bottom: 1px solid #e2e8f0; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            background: #fff; 
+        }
+        .status-dot { 
+            width: 10px; 
+            height: 10px; 
+            background: #ccc; 
+            border-radius: 50%; 
+            display: inline-block; 
+            margin-right: 5px; 
+        }
+        .status-dot.live { 
+            background: var(--success); 
+            box-shadow: 0 0 8px var(--success); 
+        }
+        
+        .run-btn { 
+            background: var(--success); 
+            color: white; 
+            border: none; 
+            padding: 6px 12px; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            font-weight: bold; 
+            font-size: 0.8rem; 
+            display: flex; 
+            align-items: center; 
+            gap: 5px; 
+        }
+        .stop-btn { 
+            background: var(--danger); 
+            color: white; 
+            border: none; 
+            padding: 6px 12px; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            font-weight: bold; 
+            font-size: 0.8rem; 
+            display: none; 
+        }
+        .edit-toggle { 
+            background: #f59e0b; 
+            border: none; 
+            color: white; 
+            padding: 6px 12px; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            font-weight: bold; 
+            font-size: 0.8rem; 
+            margin-left: 10px; 
+            transition: background 0.3s; 
+        }
 
         iframe { flex: 1; border: none; background: white; }
-       
+
+        /* --- CODE & HISTORY TABS --- */
         .file-tabs { display: flex; gap: 5px; margin-bottom: 5px; }
-        .file-tab { padding: 5px 10px; font-size: 0.8rem; border: 1px solid #cbd5e1; border-radius: 4px; cursor: pointer; background: #f1f5f9; }
+        .file-tab { 
+            padding: 5px 10px; 
+            font-size: 0.8rem; 
+            border: 1px solid #cbd5e1; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            background: #f1f5f9; 
+        }
         .file-tab.active { background: var(--dark); color: #fff; border-color: var(--dark); }
-        .history-item { background: #f1f5f9; padding: 10px; margin-bottom: 8px; border-radius: 6px; border: 1px solid #e2e8f0; font-size: 0.85rem; display: flex; flex-direction: column; gap: 5px; }
+
+        .history-item { 
+            background: #f1f5f9; 
+            padding: 10px; 
+            margin-bottom: 8px; 
+            border-radius: 6px; 
+            border: 1px solid #e2e8f0; 
+            font-size: 0.85rem; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 5px; 
+        }
+        .history-header { display: flex; align-items: center; gap: 8px; }
         .star-btn { cursor: pointer; border: none; background: none; font-size: 1.2rem; }
-        .guide-box { background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 6px; padding: 10px; margin-bottom: 10px; }
+        .star-btn.active { color: orange; }
+
+        .guide-box { 
+            background: #f0f9ff; 
+            border: 1px solid #bae6fd; 
+            border-radius: 6px; 
+            padding: 10px; 
+            margin-bottom: 10px; 
+        }
         .guide-box summary { font-weight: bold; color: #0284c7; cursor: pointer; font-size: 0.9rem; }
     </style>
 </head>
@@ -96,21 +295,21 @@
             <details class="guide-box" open>
                 <summary>❓ Quick Guide</summary>
                 <div style="font-size:0.8rem; margin-top:5px; color:#334155;">
-                    1. Select an App (Left)<br>
-                    2. Type request below<br>
+                    1. Select an App<br>
+                    2. Type request (e.g., "Add a login page")<br>
                     3. Click <strong>Run Update</strong><br>
                     4. Click <strong>▶ Run Live App</strong> to test
                 </div>
             </details>
 
             <div style="font-size:0.8rem; color:var(--primary); font-weight:bold; margin-bottom:10px;" id="currentLabel">No Project Selected</div>
-           
+            
             <label style="display:flex; align-items:center; gap:8px; font-size:0.9rem; background:#eff6ff; padding:8px; border-radius:6px;">
-                <input type="checkbox" id="newsMode"> <span>🌍 News Mode</span>
+                <input type="checkbox" id="newsMode"> <span>🌍 News Mode (Access Internet)</span>
             </label>
 
-            <textarea id="prompt" style="height:100px;" placeholder="e.g. Create a To-Do list with Flask..."></textarea>
-           
+            <textarea id="prompt" style="height:100px;" placeholder="Describe your web app here..."></textarea>
+            
             <button id="genBtn" class="action-btn" onclick="handleGenerate()" style="margin-top:10px;">Run Full-Stack Update</button>
 
             <hr style="border:0; border-top:1px solid #eee; width:100%; margin: 15px 0;">
@@ -150,6 +349,7 @@
             <div style="display:flex; align-items:center; gap:10px;">
                 <span id="statusDot" class="status-dot"></span>
                 <strong id="previewModeLabel">Static Preview</strong>
+                
                 <button id="editToggleBtn" class="edit-toggle" onclick="toggleEditMode()">✎ Edit Mode: OFF</button>
                 
                 <button id="runBtn" class="run-btn" onclick="runLiveApp()">▶ Run Live App</button>
@@ -172,7 +372,7 @@
             makeResizable('resizer2', 'sidebarMiddle');
         };
 
-        // --- CORE FUNCTIONS ---
+        // --- PROJECT MANAGEMENT ---
 
         async function loadProjects() {
             try {
@@ -180,31 +380,27 @@
                 const data = await res.json();
                 const list = document.getElementById('projectList');
                 list.innerHTML = "";
-               
-                if (data.projects.length === 0) {
-                    // No projects
-                } else {
-                    data.projects.forEach(p => {
-                        const row = document.createElement('div');
-                        row.className = 'project-row';
-                       
-                        const name = document.createElement('div');
-                        name.className = 'project-name';
-                        name.innerText = p;
-                        name.onclick = () => selectProject(p);
-                       
-                        const del = document.createElement('div');
-                        del.className = 'delete-btn';
-                        del.innerText = '🗑';
-                        del.onclick = (e) => { e.stopPropagation(); deleteProject(p); };
-                       
-                        row.appendChild(name);
-                        row.appendChild(del);
-                        list.appendChild(row);
-                    });
-                   
-                    if (!currentProject && data.projects.length > 0) selectProject(data.projects[0]);
-                }
+                
+                data.projects.forEach(p => {
+                    const row = document.createElement('div');
+                    row.className = 'project-row';
+                    
+                    const name = document.createElement('div');
+                    name.className = 'project-name';
+                    name.innerText = p;
+                    name.onclick = () => selectProject(p);
+                    
+                    const del = document.createElement('div');
+                    del.className = 'delete-btn';
+                    del.innerText = '🗑';
+                    del.onclick = (e) => { e.stopPropagation(); deleteProject(p); };
+                    
+                    row.appendChild(name);
+                    row.appendChild(del);
+                    list.appendChild(row);
+                });
+                
+                if (!currentProject && data.projects.length > 0) selectProject(data.projects[0]);
             } catch(e) { console.error(e); }
         }
 
@@ -225,7 +421,7 @@
                 if(currentProject === name) currentProject = "";
                 loadProjects();
                 if(!currentProject) location.reload();
-            } else alert("Error: " + data.error);
+            }
         }
 
         function selectProject(name) {
@@ -241,24 +437,24 @@
             setTimeout(loadHistory, 500);
             setTimeout(refreshColorsFromCode, 500);
             
-            // Reset Edit Mode on switch
+            // Reset Edit Mode logic when switching projects
             isEditMode = true; 
-            toggleEditMode(); // Toggles to false
+            toggleEditMode(); // Forces it to false
         }
 
-        // --- GENERATE BUTTON LOGIC ---
+        // --- AI GENERATION ---
+
         async function handleGenerate() {
-            if(!currentProject) return alert("Please select a project from the left sidebar first.");
-           
+            if(!currentProject) return alert("Select a project first.");
+            
             stopLiveApp();
             const prompt = document.getElementById('prompt').value;
             const useNews = document.getElementById('newsMode').checked;
             const btn = document.getElementById('genBtn');
-           
-            // Visual Feedback
+            
             btn.disabled = true;
             btn.innerText = "Building... (Please Wait)";
-           
+            
             try {
                 const res = await fetch('/generate', {
                     method: 'POST',
@@ -266,7 +462,7 @@
                     body: JSON.stringify({ prompt, project: currentProject, use_news: useNews })
                 });
                 const d = await res.json();
-               
+                
                 if (d.success) {
                     setPreviewStatic();
                     loadCodeIntoEditor();
@@ -275,12 +471,14 @@
                     alert("AI Error: " + d.error);
                 }
             } catch(e) {
-                alert("Network Error: Is the backend running?");
+                alert("Network Error: Is backend running?");
             } finally {
                 btn.disabled = false;
                 btn.innerText = "Run Full-Stack Update";
             }
         }
+
+        // --- LIVE APP RUNNER (AZURE PROXY) ---
 
         async function runLiveApp() {
             if(!currentProject) return;
@@ -289,15 +487,15 @@
             const data = await res.json();
             if(data.success) {
                 isRunning = true;
-                // Disable Edit Mode when running live
                 if (isEditMode) toggleEditMode();
                 document.getElementById('editToggleBtn').style.display = 'none';
 
-                document.getElementById('previewModeLabel').innerText = "Live App (Port 5005)";
+                document.getElementById('previewModeLabel').innerText = "Live App (Azure Proxy)";
                 document.getElementById('statusDot').classList.add('live');
                 document.getElementById('runBtn').style.display = 'none';
                 document.getElementById('stopBtn').style.display = 'inline-flex';
-                document.getElementById('previewFrame').src = data.url;
+                // THIS USES THE /live/ PROXY ROUTE FOR AZURE
+                document.getElementById('previewFrame').src = data.url; 
             } else {
                 alert("Failed: " + data.error);
                 document.getElementById('runBtn').innerText = "▶ Run Live App";
@@ -321,23 +519,20 @@
             document.getElementById('previewFrame').src = "/preview/" + currentProject;
         }
 
-        // --- VISUAL EDITOR LOGIC (NEW) ---
+        // --- VISUAL EDITOR LOGIC (CLICK TO EDIT) ---
+
         async function toggleEditMode() {
             isEditMode = !isEditMode;
             const btn = document.getElementById('editToggleBtn');
             const iframe = document.getElementById('previewFrame');
             
             if (isEditMode) {
-                // 1. Force Stop Live App (Editing only works in Static Mode)
                 if (isRunning) await stopLiveApp();
                 
                 btn.innerText = "💾 Save Changes";
-                btn.style.background = "#22c55e"; // Green for Save
+                btn.style.background = "#22c55e";
                 
-                // 2. Inject Editing Logic into Iframe
                 const doc = iframe.contentDocument;
-                
-                // Add a style to show what is editable
                 const style = doc.createElement('style');
                 style.id = "editor-styles";
                 style.innerHTML = `
@@ -347,16 +542,12 @@
                 `;
                 doc.head.appendChild(style);
 
-                // Make everything editable on click
                 doc.body.addEventListener('click', function(e) {
                     e.preventDefault(); 
                     e.stopPropagation();
-                    
                     let target = e.target;
-                    // Enable editing
                     target.contentEditable = "true";
                     target.focus();
-                    
                     target.onkeydown = (k) => {
                         if(k.key === 'Enter') {
                             k.preventDefault();
@@ -366,23 +557,18 @@
                 }, true);
 
             } else {
-                // --- SAVING ---
                 btn.innerText = "✎ Edit Mode: OFF";
                 btn.style.background = "#f59e0b";
                 
                 const doc = iframe.contentDocument;
-                
-                // 1. Clean up
                 const s = doc.getElementById('editor-styles');
                 if(s) s.remove();
                 
                 const editables = doc.querySelectorAll('*[contenteditable]');
                 editables.forEach(el => el.removeAttribute('contenteditable'));
                 
-                // 2. Get the raw HTML
                 const newHtml = doc.documentElement.outerHTML;
                 
-                // 3. Save to server
                 await fetch('/save_file', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
@@ -393,26 +579,38 @@
                     })
                 });
                 
-                // 4. Refresh Editor and History
                 loadCodeIntoEditor();
                 loadHistory();
             }
         }
 
-        // --- UTILS ---
+        // --- UTILITY FUNCTIONS ---
+
         function uiSwitchTab(t) {
             document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
             document.querySelectorAll('.content-area').forEach(x => x.classList.remove('active'));
-            if(t==='ai') { document.querySelector('.tab:nth-child(1)').classList.add('active'); document.getElementById('ai-panel').classList.add('active'); }
-            else if(t==='design') { document.querySelector('.tab:nth-child(2)').classList.add('active'); document.getElementById('design-panel').classList.add('active'); refreshColorsFromCode(); }
-            else if(t==='history') { document.querySelector('.tab:nth-child(3)').classList.add('active'); document.getElementById('history-panel').classList.add('active'); loadHistory(); }
-            else { document.querySelector('.tab:nth-child(4)').classList.add('active'); document.getElementById('code-panel').classList.add('active'); loadCodeIntoEditor(); }
+            if(t==='ai') { 
+                document.querySelector('.tab:nth-child(1)').classList.add('active'); 
+                document.getElementById('ai-panel').classList.add('active'); 
+            } else if(t==='design') { 
+                document.querySelector('.tab:nth-child(2)').classList.add('active'); 
+                document.getElementById('design-panel').classList.add('active'); 
+                refreshColorsFromCode(); 
+            } else if(t==='history') { 
+                document.querySelector('.tab:nth-child(3)').classList.add('active'); 
+                document.getElementById('history-panel').classList.add('active'); 
+                loadHistory(); 
+            } else { 
+                document.querySelector('.tab:nth-child(4)').classList.add('active'); 
+                document.getElementById('code-panel').classList.add('active'); 
+                loadCodeIntoEditor(); 
+            }
         }
 
-        function uiSwitchFile(filename) {
-            currentFile = filename;
-            document.getElementById('tab-html').classList.toggle('active', filename === 'index.html');
-            document.getElementById('tab-py').classList.toggle('active', filename === 'app.py');
+        function uiSwitchFile(f) {
+            currentFile = f;
+            document.getElementById('tab-html').classList.toggle('active', f === 'index.html');
+            document.getElementById('tab-py').classList.toggle('active', f === 'app.py');
             loadCodeIntoEditor();
         }
 
@@ -451,16 +649,19 @@
             });
         }
 
-        async function toggleStar(filename) {
-            await fetch('/toggle_star', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ project: currentProject, file: filename }) });
+        async function toggleStar(f) {
+            await fetch('/toggle_star', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ project: currentProject, file: f }) });
             loadHistory();
         }
 
-        async function restoreVersion(backupFile) {
+        async function restoreVersion(f) {
             stopLiveApp();
             if(!confirm("Restore?")) return;
-            await fetch('/restore_project', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ project: currentProject, backup_file: backupFile }) });
-            alert("Restored!"); setPreviewStatic(); loadCodeIntoEditor(); loadHistory();
+            await fetch('/restore_project', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ project: currentProject, backup_file: f }) });
+            alert("Restored!"); 
+            setPreviewStatic(); 
+            loadCodeIntoEditor(); 
+            loadHistory();
         }
 
         async function refreshColorsFromCode() {
@@ -477,23 +678,36 @@
         }
 
         function createColorPicker(varName, hexValue, container) {
-            const row = document.createElement('div'); row.className = 'color-row';
+            const row = document.createElement('div');
+            row.className = 'color-row';
             row.innerHTML = `<span style="font-family:monospace;font-size:0.8rem;">${varName}</span>`;
-            const input = document.createElement('input'); input.type = 'color'; input.value = hexValue; input.style.border="none"; input.style.background="none";
+            const input = document.createElement('input');
+            input.type = 'color';
+            input.value = hexValue;
+            input.style.border="none";
+            input.style.background="none";
+            
             input.addEventListener('input', async (e) => {
                 const res = await fetch('/get_file', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({project: currentProject, filename: 'index.html'}) });
                 let code = (await res.json()).code;
                 code = code.replace(new RegExp(`(${varName}\\s*:\\s*)(#[0-9a-fA-F]{3,6})`, 'g'), `$1${e.target.value}`);
+                
                 await fetch('/save_file', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({project: currentProject, filename: 'index.html', code: code}) });
+                
                 if(!isRunning) document.getElementById('previewFrame').contentDocument.documentElement.style.setProperty(varName, e.target.value);
             });
-            row.appendChild(input); container.appendChild(row);
+            row.appendChild(input); 
+            container.appendChild(row);
         }
 
         document.getElementById('fileInput').addEventListener('change', async function() {
-            const fd = new FormData(); fd.append('file', this.files[0]);
+            const fd = new FormData();
+            fd.append('file', this.files[0]);
             const d = await (await fetch('/upload_asset', { method:'POST', body:fd })).json();
-            if(d.success) { navigator.clipboard.writeText(d.snippet); alert("Asset snippet copied!"); }
+            if(d.success) { 
+                navigator.clipboard.writeText(d.snippet); 
+                alert("Asset snippet copied!"); 
+            }
         });
 
         function downloadZip() { window.location.href = "/download_zip/" + currentProject; }
@@ -502,6 +716,7 @@
             const resizer = document.getElementById(resizerId);
             const sidebar = document.getElementById(sidebarId);
             let x = 0; let w = 0;
+            
             const mouseDownHandler = function(e) {
                 x = e.clientX;
                 const rect = sidebar.getBoundingClientRect();
@@ -511,16 +726,19 @@
                 resizer.classList.add('dragging');
                 document.getElementById('previewFrame').style.pointerEvents = 'none';
             };
+            
             const mouseMoveHandler = function(e) {
                 const dx = e.clientX - x;
                 sidebar.style.width = `${w + dx}px`;
             };
+            
             const mouseUpHandler = function() {
                 document.removeEventListener('mousemove', mouseMoveHandler);
                 document.removeEventListener('mouseup', mouseUpHandler);
                 resizer.classList.remove('dragging');
                 document.getElementById('previewFrame').style.pointerEvents = 'auto';
             };
+            
             resizer.addEventListener('mousedown', mouseDownHandler);
         }
     </script>
