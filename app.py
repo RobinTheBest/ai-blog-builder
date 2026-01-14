@@ -287,21 +287,42 @@ def stop_app():
     return jsonify({"success": True})
 
 # --- AZURE PROXY ROUTE ---
+# --- SMARTER AZURE PROXY (Fixes 404 on Redirects) ---
 @app.route('/live', defaults={'path': ''}, methods=['GET', 'POST', 'PUT', 'DELETE'])
 @app.route('/live/<path:path>', methods=['GET', 'POST', 'PUT', 'DELETE'])
 def live_proxy(path):
-    if not current_user_process: return "App is not running. Click 'Run Live App' first."
+    if not current_user_process:
+        return "App is not running. Click 'Run Live App' first."
+        
+    # Connect to the internal app on Port 5005
     target_url = f"http://127.0.0.1:{USER_APP_PORT}/{path}"
+    
     try:
         resp = requests.request(
-            method=request.method, url=target_url, headers={k:v for k,v in request.headers if k.lower() != 'host'},
-            data=request.get_data(), cookies=request.cookies, allow_redirects=False
+            method=request.method,
+            url=target_url,
+            headers={k:v for k,v in request.headers if k.lower() != 'host'},
+            data=request.get_data(),
+            cookies=request.cookies,
+            allow_redirects=False # We handle redirects manually below
         )
-        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
-        headers = [(name, value) for (name, value) in resp.raw.headers.items() if name.lower() not in excluded_headers]
-        return Response(resp.content, resp.status_code, headers)
-    except Exception as e: return f"Proxy Error: {e}"
+        
+        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection', 'location']
+        headers = [(name, value) for (name, value) in resp.raw.headers.items()
+                   if name.lower() not in excluded_headers]
+        
+        # 🔧 CRITICAL FIX: Rewrite Redirects to stay inside the tunnel
+        if 'Location' in resp.headers:
+            loc = resp.headers['Location']
+            # If the app redirects to "/login", make it "/live/login"
+            if loc.startswith('/'):
+                headers.append(('Location', f'/live{loc}'))
+            else:
+                headers.append(('Location', loc))
 
+        return Response(resp.content, resp.status_code, headers)
+    except Exception as e:
+        return f"Proxy Error: The internal app is failing to respond. Error: {e}"
 # --- STATIC PREVIEW ROUTE ---
 @app.route('/preview/<project>')
 def preview_project(project):
