@@ -258,6 +258,7 @@ def generate():
 
 # --- RUN/STOP (WITH AZURE PROXY) ---
 # --- SMART RUNNER (Detects Crashes) ---
+# --- NON-BLOCKING SMART RUNNER ---
 @app.route('/run_app/<project>')
 def run_app(project):
     global current_user_process
@@ -278,28 +279,34 @@ def run_app(project):
     try:
         env = os.environ.copy()
         env['PORT'] = str(USER_APP_PORT)
-        # Remove Flask reload env vars so the sub-app doesn't get confused
         for k in ['WERKZEUG_SERVER_FD', 'WERKZEUG_RUN_MAIN']:
             if k in env: del env[k]
 
-        # 2. Start Process with Error Capturing
+        # 2. LOGGING TO FILE (Prevents Freezes)
+        # We write output to a file instead of a pipe.
+        # This prevents the "Buffer Full" freeze that is happening now.
+        log_path = os.path.join(path, "startup_log.txt")
+        log_file = open(log_path, "w") # We keep this open
+
         current_user_process = subprocess.Popen(
             [sys.executable, "app.py"], 
             cwd=path, 
             env=env,
-            stderr=subprocess.PIPE, # Capture errors
-            text=True
+            stdout=log_file, # Redirect output to file
+            stderr=log_file  # Redirect errors to file
         )
         
-        # 3. Wait 1 second to see if it crashes immediately
-        time.sleep(1.5)
+        # 3. Wait 2 seconds to check for startup crash
+        time.sleep(2)
         
         if current_user_process.poll() is not None:
-            # It died! Read the error message.
-            error_log = current_user_process.stderr.read()
-            print(f"❌ User App Crashed:\n{error_log}")
-            return jsonify({"success": False, "error": f"App Crashed on Startup:\n{error_log}"})
+            # It died! Read the file to see why.
+            log_file.close()
+            with open(log_path, "r") as f:
+                error_log = f.read()
+            return jsonify({"success": False, "error": f"App Crashed:\n{error_log}"})
             
+        # Success! (Leave log_file open or let OS handle it)
         return jsonify({"success": True, "url": "/live/"})
         
     except Exception as e: 

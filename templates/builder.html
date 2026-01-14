@@ -480,28 +480,46 @@
 
         // --- LIVE APP RUNNER (AZURE PROXY) ---
 
-        async function runLiveApp() {
-            if(!currentProject) return;
-            document.getElementById('runBtn').innerText = "Starting...";
-            const res = await fetch('/run_app/' + currentProject);
-            const data = await res.json();
-            if(data.success) {
-                isRunning = true;
-                if (isEditMode) toggleEditMode();
-                document.getElementById('editToggleBtn').style.display = 'none';
+async function runLiveApp() {
+    if(!currentProject) return;
+    
+    const btn = document.getElementById('runBtn');
+    const originalText = btn.innerText;
+    btn.innerText = "Starting...";
+    btn.disabled = true;
 
-                document.getElementById('previewModeLabel').innerText = "Live App (Azure Proxy)";
-                document.getElementById('statusDot').classList.add('live');
-                document.getElementById('runBtn').style.display = 'none';
-                document.getElementById('stopBtn').style.display = 'inline-flex';
-                // THIS USES THE /live/ PROXY ROUTE FOR AZURE
-                document.getElementById('previewFrame').src = data.url; 
-            } else {
-                alert("Failed: " + data.error);
-                document.getElementById('runBtn').innerText = "▶ Run Live App";
-            }
+    try {
+        const res = await fetch('/run_app/' + currentProject);
+        
+        // If server crashes (500), throw error
+        if (!res.ok) throw new Error("Server Error: " + res.statusText);
+        
+        const data = await res.json();
+        
+        if(data.success) {
+            isRunning = true;
+            if (isEditMode) toggleEditMode();
+            document.getElementById('editToggleBtn').style.display = 'none';
+
+            document.getElementById('previewModeLabel').innerText = "Live App (Azure Proxy)";
+            document.getElementById('statusDot').classList.add('live');
+            btn.style.display = 'none';
+            document.getElementById('stopBtn').style.display = 'inline-flex';
+            document.getElementById('previewFrame').src = data.url; 
+        } else {
+            alert("Failed: " + data.error);
         }
-
+    } catch (e) {
+        alert("System Error: " + e.message);
+    } finally {
+        // Always reset button if failed
+        if(!isRunning) {
+            btn.innerText = "▶ Run Live App";
+            btn.style.display = 'inline-flex';
+            btn.disabled = false;
+        }
+    }
+}
         async function stopLiveApp() {
             if(!isRunning) return;
             await fetch('/stop_app');
