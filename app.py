@@ -3,6 +3,7 @@ import json
 import uuid
 import shutil
 import datetime
+import traceback # Add this at the top of app.py if missing
 import re
 import subprocess
 import time
@@ -85,16 +86,22 @@ def extract_json_from_text(text):
         return text
 
 def kill_process_on_port(port):
+    """Safely tries to kill old processes, ignores errors on Azure."""
     try:
-        result = subprocess.check_output(f"lsof -t -i:{port}", shell=True)
-        pids = result.decode().strip().split('\n')
-        for pid in pids:
-            if pid:
-                os.kill(int(pid), signal.SIGKILL)
-        time.sleep(1)
-    except:
-        pass
-
+        # Try pkill first (works on most Linux distros)
+        subprocess.run(["pkill", "-f", f"port={port}"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        
+        # Try lsof as backup (but don't crash if missing)
+        try:
+            result = subprocess.check_output(f"lsof -t -i:{port}", shell=True, stderr=subprocess.DEVNULL)
+            pids = result.decode().strip().split('\n')
+            for pid in pids:
+                if pid: os.kill(int(pid), signal.SIGKILL)
+        except:
+            pass # lsof failed, likely not installed on Azure. Ignore it.
+            
+    except Exception as e:
+        print(f"⚠️ Cleanup warning: {e}")
 def cleanup_old_backups(project_name):
     backup_folder = os.path.join(BACKUP_DIR, secure_filename(project_name))
     if not os.path.exists(backup_folder): return
@@ -259,16 +266,66 @@ def generate():
 # --- RUN/STOP (WITH AZURE PROXY) ---
 # --- SMART RUNNER (Detects Crashes) ---
 # --- NON-BLOCKING SMART RUNNER ---
+
 @app.route('/run_app/<project>')
 def run_app(project):
-    global current_user_process
-    
-    # 1. Kill existing process
-    if current_user_process:
-        try: 
-            os.kill(current_user_process.pid, signal.SIGTERM)
-            current_user_process.wait()
-        except: pass
+    # SAFETY WRAPPER: Catches 500 Errors and returns them as text
+    try:
+        global current_user_process
+        
+        # 1. Kill known process
+        if current_user_process:
+            try: 
+                os.kill(current_user_process.pid, signal.SIGTERM)
+                current_user_process.wait(timeout=2)
+            except: pass
+
+        # 2. Cleanup port (Safe version)
+        kill_process_on_port(USER_APP_PORT)
+        
+        path = get_project_dir(project)
+        if not os.path.exists(os.path.join(path, "app.py")): 
+            return jsonify({"success": False, "error": "app.py not found"})
+        
+        # 3. Prepare Environment
+        env = os.environ.copy()
+        env['PORT'] = str(USER_APP_PORT)
+        # Clean conflicting env vars
+        for k in ['WERKZEUG_SERVER_FD', 'WERKZEUG_RUN_MAIN']:
+            if k in env: del env[k]
+
+        # 4. Setup Log File (In a safe temp area if possible, or project dir)
+        log_path = os.path.join(path, "startup_log.txt")
+        
+        # 5. Start Process
+        print(f"🚀 Starting app in: {path}")
+        log_file = open(log_path, "w")
+        
+        current_user_process = subprocess.Popen(
+            [sys.executable, "app.py"], 
+            cwd=path, 
+            env=env,
+            stdout=log_file,
+            stderr=log_file
+        )
+        
+        # 6. Wait and Check
+        time.sleep(2)
+        
+        # Check if it died
+        if current_user_process.poll() is not None:
+            log_file.close()
+            with open(log_path, "r") as f:
+                err = f.read()
+            return jsonify({"success": False, "error": f"Startup Failed:\n{err}"})
+
+        return jsonify({"success": True, "url": "/live/"})
+
+    except Exception as e:
+        # This catches the 500 error and sends the details to you
+        err_msg = traceback.format_exc()
+        print(f"❌ INTERNAL ERROR: {err_msg}")
+        return jsonify({"success": False, "error": f"INTERNAL BUILDER ERROR:\n{err_msg}"})
     
     kill_process_on_port(USER_APP_PORT)
     path = get_project_dir(project)
