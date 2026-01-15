@@ -3,14 +3,15 @@ import json
 import uuid
 import shutil
 import datetime
-import traceback # Add this at the top of app.py if missing
 import re
 import subprocess
 import time
 import sys
 import signal
 import ast
-import requests  # Required for Azure Proxy
+import traceback
+import requests
+import tempfile # <--- NEW: SAFER LOGGING
 from flask import Flask, render_template, request, jsonify, send_file, Response
 from werkzeug.utils import secure_filename
 from google import genai
@@ -23,7 +24,9 @@ env_path = os.path.join(BASE_DIR, '.env')
 load_dotenv(env_path)
 
 app = Flask(__name__)
-current_user_process = None  # <--- ADD THIS LINE
+
+# --- GLOBAL STATE ---
+current_user_process = None 
 
 # --- CONFIGURATION ---
 PROJECTS_DIR = os.path.join(BASE_DIR, "projects")
@@ -89,20 +92,16 @@ def extract_json_from_text(text):
 def kill_process_on_port(port):
     """Safely tries to kill old processes, ignores errors on Azure."""
     try:
-        # Try pkill first (works on most Linux distros)
         subprocess.run(["pkill", "-f", f"port={port}"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        
-        # Try lsof as backup (but don't crash if missing)
         try:
             result = subprocess.check_output(f"lsof -t -i:{port}", shell=True, stderr=subprocess.DEVNULL)
             pids = result.decode().strip().split('\n')
             for pid in pids:
                 if pid: os.kill(int(pid), signal.SIGKILL)
-        except:
-            pass # lsof failed, likely not installed on Azure. Ignore it.
-            
+        except: pass 
     except Exception as e:
         print(f"⚠️ Cleanup warning: {e}")
+
 def cleanup_old_backups(project_name):
     backup_folder = os.path.join(BACKUP_DIR, secure_filename(project_name))
     if not os.path.exists(backup_folder): return
@@ -145,13 +144,29 @@ def create_project():
 @app.route('/delete_project', methods=['POST'])
 def delete_project():
     try:
-        name = request.json.get('name'); path = get_project_dir(name)
+        name = request.json.get('name')
+        
+        # 1. CRITICAL: Stop the app first to release file locks
+        # If we don't do this, Windows/Azure blocks the deletion
+        global current_user_process
+        if current_user_process:
+            try: 
+                os.kill(current_user_process.pid, signal.SIGTERM)
+                current_user_process.wait(timeout=1)
+            except: pass
+        kill_process_on_port(USER_APP_PORT)
+        
+        # 2. Now safe to delete
+        path = get_project_dir(name)
         if path and os.path.exists(path):
-            create_backup(name, "Pre_Delete"); shutil.rmtree(path)
+            # Create a "Graveyard" backup just in case
+            create_backup(name, "Pre_Delete")
+            shutil.rmtree(path)
             return jsonify({"success": True})
-        return jsonify({"success": False})
-    except Exception as e: return jsonify({"success": False, "error": str(e)})
-
+            
+        return jsonify({"success": False, "error": "Project not found"})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})
 @app.route('/get_file', methods=['POST'])
 def get_file():
     try:
@@ -220,21 +235,19 @@ def generate():
             config=types.GenerateContentConfig(tools=tools, response_mime_type="application/json")
         )
         
-        # --- ROBUST PARSING BLOCK (THE FIX) ---
+        # --- ROBUST PARSING BLOCK ---
         raw_text = extract_json_from_text(response.text)
         try:
             result = json.loads(raw_text)
         except json.JSONDecodeError:
             print("⚠️ JSON Error detected. Attempting to sanitize...")
             try:
-                # Fix invalid escapes using Regex
                 sanitized = re.sub(r'\\(?![/u"\\bfnrt])', r'\\\\', raw_text)
                 result = json.loads(sanitized)
             except:
-                # Fallback to ast literal_eval for Python-like dictionaries
                 fixed_for_ast = raw_text.replace("null", "None").replace("true", "True").replace("false", "False")
                 result = ast.literal_eval(fixed_for_ast)
-        # -------------------------------------
+        # ---------------------------
         
         # 1. Save Python App
         new_app = str(result.get('app_code', '')).strip()
@@ -264,43 +277,33 @@ def generate():
         print(f"AI Error: {e}")
         return jsonify({"success": False, "error": str(e)})
 
-# --- RUN/STOP (WITH AZURE PROXY) ---
-# --- SMART RUNNER (Detects Crashes) ---
-# --- NON-BLOCKING SMART RUNNER ---
+# --- RUN/STOP (SAFE TEMP LOGGING) ---
 
 @app.route('/run_app/<project>')
 def run_app(project):
-    # SAFETY WRAPPER: Catches 500 Errors and returns them as text
     try:
         global current_user_process
         
-        # 1. Kill known process
         if current_user_process:
             try: 
                 os.kill(current_user_process.pid, signal.SIGTERM)
                 current_user_process.wait(timeout=2)
             except: pass
 
-        # 2. Cleanup port (Safe version)
         kill_process_on_port(USER_APP_PORT)
         
         path = get_project_dir(project)
         if not os.path.exists(os.path.join(path, "app.py")): 
             return jsonify({"success": False, "error": "app.py not found"})
         
-        # 3. Prepare Environment
+        # Prepare Environment
         env = os.environ.copy()
         env['PORT'] = str(USER_APP_PORT)
-        # Clean conflicting env vars
         for k in ['WERKZEUG_SERVER_FD', 'WERKZEUG_RUN_MAIN']:
             if k in env: del env[k]
 
-        # 4. Setup Log File (In a safe temp area if possible, or project dir)
-        log_path = os.path.join(path, "startup_log.txt")
-        
-        # 5. Start Process
-        print(f"🚀 Starting app in: {path}")
-        log_file = open(log_path, "w")
+        # USE TEMP FILE FOR LOGGING (Prevents Permissions Errors)
+        log_file = tempfile.TemporaryFile(mode='w+')
         
         current_user_process = subprocess.Popen(
             [sys.executable, "app.py"], 
@@ -310,94 +313,43 @@ def run_app(project):
             stderr=log_file
         )
         
-        # 6. Wait and Check
         time.sleep(2)
         
-        # Check if it died
         if current_user_process.poll() is not None:
-            log_file.close()
-            with open(log_path, "r") as f:
-                err = f.read()
+            # It died. Read the temp file.
+            log_file.seek(0)
+            err = log_file.read()
             return jsonify({"success": False, "error": f"Startup Failed:\n{err}"})
 
         return jsonify({"success": True, "url": "/live/"})
 
     except Exception as e:
-        # This catches the 500 error and sends the details to you
         err_msg = traceback.format_exc()
         print(f"❌ INTERNAL ERROR: {err_msg}")
         return jsonify({"success": False, "error": f"INTERNAL BUILDER ERROR:\n{err_msg}"})
-    
+
+@app.route('/stop_app')
+def stop_app():
+    global current_user_process
+    if current_user_process:
+        try: os.kill(current_user_process.pid, signal.SIGTERM)
+        except: pass
     kill_process_on_port(USER_APP_PORT)
-    path = get_project_dir(project)
-    
-    if not os.path.exists(os.path.join(path, "app.py")): 
-        return jsonify({"success": False, "error": "app.py not found"})
-    
-    try:
-        env = os.environ.copy()
-        env['PORT'] = str(USER_APP_PORT)
-        for k in ['WERKZEUG_SERVER_FD', 'WERKZEUG_RUN_MAIN']:
-            if k in env: del env[k]
+    return jsonify({"success": True})
 
-        # 2. LOGGING TO FILE (Prevents Freezes)
-        # We write output to a file instead of a pipe.
-        # This prevents the "Buffer Full" freeze that is happening now.
-        log_path = os.path.join(path, "startup_log.txt")
-        log_file = open(log_path, "w") # We keep this open
-
-        current_user_process = subprocess.Popen(
-            [sys.executable, "app.py"], 
-            cwd=path, 
-            env=env,
-            stdout=log_file, # Redirect output to file
-            stderr=log_file  # Redirect errors to file
-        )
-        
-        # 3. Wait 2 seconds to check for startup crash
-        time.sleep(2)
-        
-        if current_user_process.poll() is not None:
-            # It died! Read the file to see why.
-            log_file.close()
-            with open(log_path, "r") as f:
-                error_log = f.read()
-            return jsonify({"success": False, "error": f"App Crashed:\n{error_log}"})
-            
-        # Success! (Leave log_file open or let OS handle it)
-        return jsonify({"success": True, "url": "/live/"})
-        
-    except Exception as e: 
-        return jsonify({"success": False, "error": str(e)})
-# --- AZURE PROXY ROUTE ---
-# --- SMARTER AZURE PROXY (Fixes 404 on Redirects) ---
-# --- DEBUGGING PROXY (Catches all URL variations) ---
-@app.route('/live', methods=['GET', 'POST', 'PUT', 'DELETE'])
-@app.route('/live/', methods=['GET', 'POST', 'PUT', 'DELETE'])
+# --- AZURE PROXY (NUCLEAR REWRITE) ---
+@app.route('/live', defaults={'path': ''}, methods=['GET', 'POST', 'PUT', 'DELETE'])
+@app.route('/live/', defaults={'path': ''}, methods=['GET', 'POST', 'PUT', 'DELETE'])
 @app.route('/live/<path:path>', methods=['GET', 'POST', 'PUT', 'DELETE'])
-def live_proxy(path=""):
-    # 1. Check if process is actually running
-    if not current_user_process:
-        return "<h3>⚠️ Error: App is not running.</h3><p>Click 'Run Live App' again.</p>"
-    
-    # 2. Construct the internal URL
-    # If path is missing, default to empty string to hit root
+def live_proxy(path):
+    if not current_user_process: return "<h3>App is not running. Click 'Run Live App' first.</h3>"
     target_url = f"http://127.0.0.1:{USER_APP_PORT}/{path}"
     
-    print(f"🔄 Proxying: /live/{path}  -->  {target_url}") # DEBUG LOG
-
     try:
-        # 3. Forward the request
         resp = requests.request(
-            method=request.method,
-            url=target_url,
-            headers={k:v for k,v in request.headers if k.lower() != 'host'},
-            data=request.get_data(),
-            cookies=request.cookies,
-            allow_redirects=False
+            method=request.method, url=target_url, headers={k:v for k,v in request.headers if k.lower() != 'host'},
+            data=request.get_data(), cookies=request.cookies, allow_redirects=False
         )
-        
-        # 4. Handle Headers & Redirects
         excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection', 'location']
         headers = [(name, value) for (name, value) in resp.raw.headers.items() if name.lower() not in excluded_headers]
         
@@ -406,25 +358,18 @@ def live_proxy(path=""):
             if loc.startswith('/'): headers.append(('Location', f'/live{loc}'))
             else: headers.append(('Location', loc))
 
-        # 5. CONTENT REWRITING (Fixes Broken Links/CSS)
         content = resp.content
         if 'text/html' in resp.headers.get('Content-Type', ''):
             try:
                 text = content.decode('utf-8')
-                # Inject Base Tag so relative links work
-                if '<head>' in text:
-                    text = text.replace('<head>', '<head><base href="/live/">')
-                # Rewrite absolute paths
+                if '<head>' in text: text = text.replace('<head>', '<head><base href="/live/">')
                 text = re.sub(r'(src|href|action)="/(?!live/)', r'\1="/live/', text)
                 content = text.encode('utf-8')
             except: pass
 
         return Response(content, resp.status_code, headers)
+    except Exception as e: return f"<h3>Proxy Error</h3><p>{e}</p>"
 
-    except requests.exceptions.ConnectionError:
-        return f"<h3>❌ Connection Refused</h3><p>The Builder tried to hit <b>{target_url}</b> but failed.</p><p><b>Possible Causes:</b><br>1. The User App crashed immediately (check code).<br>2. Azure is running multiple workers (Did you set the Startup Command?).</p>"
-    except Exception as e:
-        return f"<h3>🔥 Proxy Error</h3><p>{str(e)}</p>"
 # --- STATIC PREVIEW ROUTE ---
 @app.route('/preview/<project>')
 def preview_project(project):
@@ -439,19 +384,42 @@ def preview_project(project):
 # --- HISTORY/ASSETS ---
 @app.route('/history/<project>')
 def get_history(project):
-    cleanup_old_backups(project)
-    backup_folder = os.path.join(BACKUP_DIR, secure_filename(project))
-    if not os.path.exists(backup_folder): return jsonify({"history": []})
-    backups = []
-    for f in sorted(os.listdir(backup_folder), reverse=True):
-        if f.endswith('.zip'):
-            parts = f.split('__')
-            if len(parts) >= 2:
-                is_starred = "_STARRED" in f
-                label = parts[1].replace('.zip', '').replace('_', ' ').replace(' STARRED', '')
-                backups.append({"file": f, "label": label, "starred": is_starred})
-    return jsonify({"history": backups})
+    try:
+        cleanup_old_backups(project)
+        backup_folder = os.path.join(BACKUP_DIR, secure_filename(project))
+        
+        if not os.path.exists(backup_folder): 
+            return jsonify({"history": []})
+            
+        backups = []
+        # Sort by name (which includes timestamp) to show newest first
+        files = sorted([f for f in os.listdir(backup_folder) if f.endswith('.zip')], reverse=True)
+        
+        for f in files:
+            try:
+                # Robust parsing: strictly look for "Timestamp__Name" pattern
+                parts = f.split('__')
+                if len(parts) >= 2:
+                    is_starred = "_STARRED" in f
+                    # Clean up the label for display
+                    label = parts[1].replace('.zip', '').replace('_', ' ').replace(' STARRED', '')
+                    
+                    # Format timestamp nicely (YYYYMMDD_HHMMSS -> YYYY-MM-DD HH:MM)
+                    ts_raw = parts[0]
+                    if len(ts_raw) == 15:
+                        dt = datetime.datetime.strptime(ts_raw, "%Y%m%d_%H%M%S")
+                        nice_time = dt.strftime("%b %d, %H:%M")
+                        label = f"{nice_time} - {label}"
 
+                    backups.append({"file": f, "label": label, "starred": is_starred})
+            except:
+                # If a file is malformed, just skip it. Don't break the app.
+                continue
+                
+        return jsonify({"history": backups})
+    except Exception as e:
+        print(f"History Error: {e}")
+        return jsonify({"history": []})
 @app.route('/restore_project', methods=['POST'])
 def restore_project():
     data = request.json; project = data.get('project'); path = get_project_dir(project)
